@@ -9,6 +9,7 @@
 #include "FilterUtils.h"
 #include "PacketHeaders.h" // Need this for iterating known headers
 #include "Config.h"
+#include "PacketParser.h"
 
 #include <vector>
 #include <mutex>
@@ -20,7 +21,7 @@
 #include <string>
 #include <map>     // For std::map used in filtering
 #include <windows.h> // Required for ShellExecuteA
-#include <algorithm> // For std::sort if needed later
+#include <algorithm>
 
 bool ImGuiManager::Initialize(ID3D11Device* device, ID3D11DeviceContext* context, HWND hwnd) {
     IMGUI_CHECKVERSION();
@@ -235,7 +236,7 @@ void ImGuiManager::RenderPacketLogSection() {
         for (int index : filtered_indices) {
             // Double-check index validity against the *current* size under lock
             if (index >= 0 && static_cast<size_t>(index) < kx::g_packetLog.size()) {
-                packets_to_render.push_back(kx::g_packetLog[index]); // Copy the packet
+                packets_to_render.push_back(kx::g_packetLog[index]);
             }
         }
     } // Mutex released here
@@ -278,12 +279,13 @@ void ImGuiManager::RenderPacketLogSection() {
 			// No lock needed here, operating on packets_to_render copy
 			for (int display_index = clipper.DisplayStart; display_index < clipper.DisplayEnd; ++display_index)
             {
-	            // Access the copied packet directly by display_index
 	            // Index validation is implicitly handled by iterating up to packets_to_render.size()
 	            const auto& packet = packets_to_render[display_index];
 
-	            // Generate display string
 	            std::string displayLogEntry = kx::Utils::FormatDisplayLogEntryString(packet);
+
+	            // Attempt to get formatted parsed data string
+	            auto parsedDataStr = kx::Parsing::GetParsedDataTooltipString(packet);
 
 	            ImGui::PushID(display_index);
 
@@ -297,12 +299,19 @@ void ImGuiManager::RenderPacketLogSection() {
 	            ImGui::PushStyleColor(ImGuiCol_Text, textColor);
 	            // --- End Color Coding ---
 
-	            // Display read-only text.
 	            float buttonWidth = ImGui::CalcTextSize("Copy").x + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetStyle().ItemSpacing.x;
 	            ImGui::PushItemWidth(-buttonWidth);
 	            ImGui::InputText("##Pkt", (char*)displayLogEntry.c_str(), displayLogEntry.size() + 1, ImGuiInputTextFlags_ReadOnly);
 	            ImGui::PopItemWidth();
 	            ImGui::PopStyleColor();
+
+	            // --- Tooltip for Parsed Data ---
+	            if (ImGui::IsItemHovered() && parsedDataStr.has_value()) {
+	                ImGui::BeginTooltip();
+	                ImGui::TextUnformatted(parsedDataStr->c_str()); // Display the pre-formatted string
+	                ImGui::EndTooltip();
+	            }
+	            // --- End Tooltip ---
 
 	            ImGui::SameLine();
 

@@ -176,6 +176,7 @@
     <ClCompile Include="src\MsgRecvHook.cpp" />
     <ClCompile Include="src\MsgSendHook.cpp" />
     <ClCompile Include="src\PacketData.cpp" />
+    <ClCompile Include="src\PacketParser.cpp" />
     <ClCompile Include="src\PacketProcessor.cpp" />
     <ClCompile Include="src\PatternScanner.cpp" />
   </ItemGroup>
@@ -205,7 +206,9 @@
     <ClInclude Include="src\MsgSendHook.h" />
     <ClInclude Include="src\PacketData.h" />
     <ClInclude Include="src\PacketHeaders.h" />
+    <ClInclude Include="src\PacketParser.h" />
     <ClInclude Include="src\PacketProcessor.h" />
+    <ClInclude Include="src\PacketStructures.h" />
     <ClInclude Include="src\PatternScanner.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
