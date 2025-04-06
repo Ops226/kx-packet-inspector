@@ -93,7 +93,7 @@ void ImGuiManager::RenderInfoSection() {
 
 void ImGuiManager::RenderStatusControlsSection() {
     // --- Status & Controls Section ---
-    if (ImGui::CollapsingHeader("Status & Controls")) {
+    if (ImGui::CollapsingHeader("Status")) {
         // Status content
         const char* presentStatusStr = (kx::g_presentHookStatus == kx::HookStatus::OK) ? "OK" : "Failed";
         ImGui::Text("Present Hook: %s", presentStatusStr);
@@ -127,17 +127,6 @@ void ImGuiManager::RenderStatusControlsSection() {
         } else {
             ImGui::Text("MsgRecv Address: N/A"); // Placeholder display
         }
-
-        ImGui::Separator();
-
-        // Controls content
-        if (ImGui::Button("Clear Log")) {
-            std::lock_guard<std::mutex> lock(kx::g_packetLogMutex);
-            kx::g_packetLog.clear();
-        }
-        ImGui::SameLine();
-        ImGui::Checkbox("Pause Capture", &kx::g_capturePaused);
-        ImGui::Spacing();
     }
 }
 
@@ -232,9 +221,20 @@ void ImGuiManager::RenderPacketLogSection() {
     }
 
     // --- Statistics Display ---
+    // --- Log Controls ---
+    if (ImGui::Button("Clear Log")) {
+        std::lock_guard<std::mutex> lock(kx::g_packetLogMutex);
+        kx::g_packetLog.clear();
+    }
+    ImGui::SameLine();
+    ImGui::Checkbox("Pause Capture", &kx::g_capturePaused);
+    // --- End Log Controls ---
+
+    // --- Statistics Display ---
     ImGui::Text("Packet Log (Showing: %zu / Total: %zu)", filtered_indices.size(), total_packets);
+    // --- End Log Controls ---
+
     ImGui::Separator();
-    // --- End Statistics ---
 
     ImGui::BeginChild("PacketLogScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
 
