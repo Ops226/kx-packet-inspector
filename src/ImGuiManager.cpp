@@ -109,11 +109,16 @@ void ImGuiManager::RenderStatusControlsSection() {
 
         if (kx::g_msgSendAddress != 0) {
             ImGui::Text("MsgSend Address: 0x%p", (void*)kx::g_msgSendAddress);
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Copy##SendAddr")) {
+                char addrBuf[32];
+                snprintf(addrBuf, sizeof(addrBuf), "0x%p", (void*)kx::g_msgSendAddress);
+                ImGui::SetClipboardText(addrBuf);
+            }
         } else {
             ImGui::Text("MsgSend Address: N/A");
         }
 
-        // Placeholders for Recv Hook
         const char* msgRecvStatusStr;
          switch (kx::g_msgRecvHookStatus) {
             case kx::HookStatus::OK:       msgRecvStatusStr = "OK"; break;
@@ -121,11 +126,18 @@ void ImGuiManager::RenderStatusControlsSection() {
             case kx::HookStatus::Unknown:
             default:                       msgRecvStatusStr = "Not Found/Hooked"; break;
         }
-        ImGui::Text("MsgRecv Hook: %s", msgRecvStatusStr); // Placeholder display
+        ImGui::Text("MsgRecv Hook: %s", msgRecvStatusStr);
+
         if (kx::g_msgRecvAddress != 0) {
-            ImGui::Text("MsgRecv Address: 0x%p", (void*)kx::g_msgRecvAddress); // Placeholder display
+            ImGui::Text("MsgRecv Address: 0x%p", (void*)kx::g_msgRecvAddress);
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Copy##RecvAddr")) {
+                char addrBuf[32];
+                snprintf(addrBuf, sizeof(addrBuf), "0x%p", (void*)kx::g_msgRecvAddress);
+                ImGui::SetClipboardText(addrBuf);
+            }
         } else {
-            ImGui::Text("MsgRecv Address: N/A"); // Placeholder display
+            ImGui::Text("MsgRecv Address: N/A");
         }
     }
 }
