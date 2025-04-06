@@ -78,12 +78,23 @@ bool InitializeMsgSendHook(uintptr_t targetFunctionAddress) {
     return true;
 }
 
-// Disables and removes the MinHook detour for the message sending function.
+// The explicit disable-remove sequence is employed to avoid potential disconnects or packet loss,
+// ensuring the hook is cleanly removed before the shutdown process completes.
 void CleanupMsgSendHook() {
     if (hookedMsgSendAddress != 0) {
-        // Reset local state
+        // Disable the hook to immediately halt message interception.
+        if (MH_DisableHook(reinterpret_cast<LPVOID>(hookedMsgSendAddress)) != MH_OK) {
+            std::cerr << "[MsgSendHook] Failed to disable hook." << std::endl;
+        }
+
+        // Remove the hook to finalize cleanup and restore original function behavior.
+        if (MH_RemoveHook(reinterpret_cast<LPVOID>(hookedMsgSendAddress)) != MH_OK) {
+            std::cerr << "[MsgSendHook] Failed to remove hook." << std::endl;
+        }
+
+        // Reset local state variables.
         hookedMsgSendAddress = 0;
         originalMsgSend = nullptr;
-        std::cout << "[MsgSendHook] Cleaned up." << std::endl; // Acknowledge cleanup call
+        std::cout << "[MsgSendHook] Cleaned up." << std::endl;
     }
 }

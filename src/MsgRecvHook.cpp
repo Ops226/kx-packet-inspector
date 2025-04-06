@@ -187,17 +187,23 @@ bool InitializeMsgRecvHook(uintptr_t targetFunctionAddress) {
     return true;
 }
 
-// Cleans up resources related to the MsgRecv hook.
-// Primarily relies on HookManager::Shutdown for actual hook removal.
+// We explicitly disable and then remove the hook to ensure that no further calls are intercepted,
+// thereby safeguarding packet integrity during the shutdown process.
 void CleanupMsgRecvHook() {
     if (hookedMsgRecvAddress != 0) {
-        // --- Rely on global HookManager::Shutdown ---
-        // We no longer need to explicitly call MH_DisableHook or MH_RemoveHook here,
-        // as HookManager::Shutdown() handles disabling/removing all hooks managed by MinHook.
+        // Disable the hook to immediately stop intercepting calls.
+        if (MH_DisableHook(reinterpret_cast<LPVOID>(hookedMsgRecvAddress)) != MH_OK) {
+            std::cerr << "[MsgRecvHook] Failed to disable hook." << std::endl;
+        }
 
-        // Reset local state variables
+        // Remove the hook to clean up internal MinHook structures.
+        if (MH_RemoveHook(reinterpret_cast<LPVOID>(hookedMsgRecvAddress)) != MH_OK) {
+            std::cerr << "[MsgRecvHook] Failed to remove hook." << std::endl;
+        }
+
+        // Reset local state variables.
         hookedMsgRecvAddress = 0;
-        originalMsgRecv = nullptr; // Clear the original function pointer
-        std::cout << "[MsgRecvHook] Cleaned up." << std::endl; // Acknowledge cleanup call
+        originalMsgRecv = nullptr;
+        std::cout << "[MsgRecvHook] Cleaned up." << std::endl;
     }
 }
