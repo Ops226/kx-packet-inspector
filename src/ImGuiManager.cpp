@@ -223,16 +223,24 @@ void ImGuiManager::RenderFilteringSection() {
 }
 
 void ImGuiManager::RenderPacketLogSection() {
-    // Calculate filtered indices once for statistics and log rendering
-    std::vector<int> filtered_indices;
+    // Create a snapshot of packets to render to avoid holding lock during ImGui rendering
+    std::vector<kx::PacketInfo> packets_to_render;
     size_t total_packets = 0;
     {
+    	// Lock scope for accessing global log and creating copy
         std::lock_guard<std::mutex> lock(kx::g_packetLogMutex);
-        filtered_indices = kx::Filtering::GetFilteredPacketIndices(kx::g_packetLog);
-        total_packets = kx::g_packetLog.size(); // Get total count while locked
-    }
+        total_packets = kx::g_packetLog.size(); // Get total count first
+        std::vector<int> filtered_indices = kx::Filtering::GetFilteredPacketIndices(kx::g_packetLog);
 
-    // --- Statistics Display ---
+        packets_to_render.reserve(filtered_indices.size());
+        for (int index : filtered_indices) {
+            // Double-check index validity against the *current* size under lock
+            if (index >= 0 && static_cast<size_t>(index) < kx::g_packetLog.size()) {
+                packets_to_render.push_back(kx::g_packetLog[index]); // Copy the packet
+            }
+        }
+    } // Mutex released here
+
     // --- Log Controls ---
     if (ImGui::Button("Clear Log")) {
         std::lock_guard<std::mutex> lock(kx::g_packetLogMutex);
@@ -240,70 +248,71 @@ void ImGuiManager::RenderPacketLogSection() {
     }
     ImGui::SameLine();
     ImGui::Checkbox("Pause Capture", &kx::g_capturePaused);
-    // --- End Log Controls ---
 
-    // --- Statistics Display ---
-    ImGui::Text("Packet Log (Showing: %zu / Total: %zu)", filtered_indices.size(), total_packets);
+    ImGui::Text("Packet Log (Showing: %zu / Total: %zu)", packets_to_render.size(), total_packets);
     // --- End Log Controls ---
 
     ImGui::Separator();
 
     ImGui::BeginChild("PacketLogScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
 
-    // Use clipper for efficient rendering of visible items.
-    ImGuiListClipper clipper;
-    clipper.Begin(filtered_indices.size());
-    while (clipper.Step()) {
-        std::lock_guard<std::mutex> lock(kx::g_packetLogMutex); // Lock for accessing packet data
+    // Use clipper only if there are items to display in our copy
+    if (!packets_to_render.empty()) 
+    {
+        ImGuiListClipper clipper;
+        clipper.Begin(packets_to_render.size());
+		while (clipper.Step()) 
+        {
+			// No lock needed here, operating on packets_to_render copy
+			for (int display_index = clipper.DisplayStart; display_index < clipper.DisplayEnd; ++display_index)
+            {
+	            // Access the copied packet directly by display_index
+	            // Index validation is implicitly handled by iterating up to packets_to_render.size()
+	            const auto& packet = packets_to_render[display_index];
 
-        for (int display_index = clipper.DisplayStart; display_index < clipper.DisplayEnd; ++display_index) {
-            if (display_index < 0 || display_index >= filtered_indices.size()) continue;
-            int original_index = filtered_indices[display_index];
+	            // Generate display string
+	            std::string displayLogEntry = kx::Utils::FormatDisplayLogEntryString(packet);
 
-            if (original_index < 0 || original_index >= kx::g_packetLog.size()) continue;
-            const auto& packet = kx::g_packetLog[original_index];
+	            ImGui::PushID(display_index);
 
-            // Generate display string (potentially truncated hex).
-            std::string displayLogEntry = kx::Utils::FormatDisplayLogEntryString(packet);
+	            // --- Color Coding ---
+	            ImVec4 textColor;
+	            if (packet.direction == kx::PacketDirection::Sent) {
+	                textColor = ImVec4(0.4f, 0.7f, 1.0f, 1.0f); // Light Blue for Sent
+	            } else { // Received
+	                textColor = ImVec4(0.4f, 1.0f, 0.7f, 1.0f); // Light Green for Received
+	            }
+	            ImGui::PushStyleColor(ImGuiCol_Text, textColor);
+	            // --- End Color Coding ---
 
-            ImGui::PushID(original_index);
+	            // Display read-only text.
+	            float buttonWidth = ImGui::CalcTextSize("Copy").x + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetStyle().ItemSpacing.x;
+	            ImGui::PushItemWidth(-buttonWidth);
+	            ImGui::InputText("##Pkt", (char*)displayLogEntry.c_str(), displayLogEntry.size() + 1, ImGuiInputTextFlags_ReadOnly);
+	            ImGui::PopItemWidth();
+	            ImGui::PopStyleColor();
 
-            // --- Color Coding ---
-            ImVec4 textColor;
-            if (packet.direction == kx::PacketDirection::Sent) {
-                textColor = ImVec4(0.4f, 0.7f, 1.0f, 1.0f); // Light Blue for Sent
-            } else { // Received
-                textColor = ImVec4(0.4f, 1.0f, 0.7f, 1.0f); // Light Green for Received
-            }
-            ImGui::PushStyleColor(ImGuiCol_Text, textColor);
-            // --- End Color Coding ---
+	            ImGui::SameLine();
 
-            // Display read-only text.
-            float buttonWidth = ImGui::CalcTextSize("Copy").x + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetStyle().ItemSpacing.x;
-            ImGui::PushItemWidth(-buttonWidth);
-            ImGui::InputText("##Pkt", (char*)displayLogEntry.c_str(), displayLogEntry.size() + 1, ImGuiInputTextFlags_ReadOnly);
-            ImGui::PopItemWidth();
-            ImGui::PopStyleColor();
+	            // Copy button: generate and copy full log entry string on click.
+	            if (ImGui::SmallButton("Copy")) {
+	                std::string fullLogEntry = kx::Utils::FormatFullLogEntryString(packet);
+	                ImGui::SetClipboardText(fullLogEntry.c_str());
+	            }
 
-            ImGui::SameLine();
+	            ImGui::PopID();
+			}
+		}
 
-            // Copy button: generate and copy full log entry string on click.
-            if (ImGui::SmallButton("Copy")) {
-                std::string fullLogEntry = kx::Utils::FormatFullLogEntryString(packet);
-                ImGui::SetClipboardText(fullLogEntry.c_str());
-            }
-
-            ImGui::PopID();
-        } // End for visible items
-    } // End while clipper
-    clipper.End();
+        clipper.End();
+    }
 
     // Auto-scroll to bottom if scrollbar is already at the end.
-    if (!filtered_indices.empty() && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+    if (!packets_to_render.empty() && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
         ImGui::SetScrollHereY(1.0f);
     }
 
-    ImGui::EndChild(); // End "PacketLogScrollingRegion"
+    ImGui::EndChild();
 }
 
 
