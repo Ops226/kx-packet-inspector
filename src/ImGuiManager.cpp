@@ -222,16 +222,21 @@ void ImGuiManager::RenderFilteringSection() {
 }
 
 void ImGuiManager::RenderPacketLogSection() {
-    ImGui::Text("Packet Log:");
-    ImGui::Separator();
-    ImGui::BeginChild("PacketLogScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
-
-    // Get indices of packets that pass current filters.
+    // Calculate filtered indices once for statistics and log rendering
     std::vector<int> filtered_indices;
+    size_t total_packets = 0;
     {
         std::lock_guard<std::mutex> lock(kx::g_packetLogMutex);
         filtered_indices = kx::Filtering::GetFilteredPacketIndices(kx::g_packetLog);
+        total_packets = kx::g_packetLog.size(); // Get total count while locked
     }
+
+    // --- Statistics Display ---
+    ImGui::Text("Packet Log (Showing: %zu / Total: %zu)", filtered_indices.size(), total_packets);
+    ImGui::Separator();
+    // --- End Statistics ---
+
+    ImGui::BeginChild("PacketLogScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
 
     // Use clipper for efficient rendering of visible items.
     ImGuiListClipper clipper;
@@ -251,11 +256,22 @@ void ImGuiManager::RenderPacketLogSection() {
 
             ImGui::PushID(original_index);
 
+            // --- Color Coding ---
+            ImVec4 textColor;
+            if (packet.direction == kx::PacketDirection::Sent) {
+                textColor = ImVec4(0.4f, 0.7f, 1.0f, 1.0f); // Light Blue for Sent
+            } else { // Received
+                textColor = ImVec4(0.4f, 1.0f, 0.7f, 1.0f); // Light Green for Received
+            }
+            ImGui::PushStyleColor(ImGuiCol_Text, textColor);
+            // --- End Color Coding ---
+
             // Display read-only text.
             float buttonWidth = ImGui::CalcTextSize("Copy").x + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetStyle().ItemSpacing.x;
             ImGui::PushItemWidth(-buttonWidth);
             ImGui::InputText("##Pkt", (char*)displayLogEntry.c_str(), displayLogEntry.size() + 1, ImGuiInputTextFlags_ReadOnly);
             ImGui::PopItemWidth();
+            ImGui::PopStyleColor();
 
             ImGui::SameLine();
 
