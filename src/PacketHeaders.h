@@ -14,17 +14,17 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <map>
 #include <sstream>
 #include <iomanip>
 #include <utility> // For std::pair
+#include <string_view> // For magic_enum results
+#include "../MagicEnum/magic_enum.hpp"
 
 #include "PacketData.h" // Required for PacketDirection enum definition
 
 namespace kx {
 
     // --- Client->Server Header IDs ---
-    // Use a plain enum or enum class, but the value is what matters.
     enum class CMSG_HeaderId : uint8_t {
         CHAT_SEND_MESSAGE = 0xF9,
         USE_SKILL = 0x17,
@@ -40,7 +40,6 @@ namespace kx {
     };
 
     // --- Server->Client Header IDs ---
-    // Initially empty or with placeholders, as none are identified yet.
     enum class SMSG_HeaderId : uint8_t {
         // Example (replace with actual identified IDs)
         // AGENT_UPDATE       = 0x??,
@@ -49,53 +48,6 @@ namespace kx {
         PLACEHOLDER = 0x00 // Remove or replace once real IDs are found
     };
 
-    // --- Internal Helper Data (Private Implementation Detail) ---
-    namespace detail {
-        // Static maps initialization (thread-safe in C++11+)
-        inline const std::map<uint8_t, std::string>& GetCmsgNameMap() {
-            static const std::map<uint8_t, std::string> cmsgNames = {
-                { static_cast<uint8_t>(CMSG_HeaderId::CHAT_SEND_MESSAGE),      "CMSG_CHAT_SEND_MESSAGE" },
-                { static_cast<uint8_t>(CMSG_HeaderId::USE_SKILL),              "CMSG_USE_SKILL" },
-                { static_cast<uint8_t>(CMSG_HeaderId::MOVEMENT),               "CMSG_MOVEMENT" },
-                { static_cast<uint8_t>(CMSG_HeaderId::MOVEMENT_WITH_ROTATION), "CMSG_MOVEMENT_WITH_ROTATION" },
-                { static_cast<uint8_t>(CMSG_HeaderId::MOVEMENT_END),           "CMSG_MOVEMENT_END" },
-                { static_cast<uint8_t>(CMSG_HeaderId::JUMP),                   "CMSG_JUMP" },
-                { static_cast<uint8_t>(CMSG_HeaderId::HEARTBEAT),              "CMSG_HEARTBEAT" },
-                { static_cast<uint8_t>(CMSG_HeaderId::SELECT_AGENT),           "CMSG_SELECT_AGENT" },
-                { static_cast<uint8_t>(CMSG_HeaderId::DESELECT_AGENT),         "CMSG_DESELECT_AGENT" },
-                { static_cast<uint8_t>(CMSG_HeaderId::MOUNT_MOVEMENT),         "CMSG_MOUNT_MOVEMENT" },
-            };
-            return cmsgNames;
-        }
-
-        inline const std::map<uint8_t, std::string>& GetSmsgNameMap() {
-            static const std::map<uint8_t, std::string> smsgNames = {
-                // { static_cast<uint8_t>(SMSG_HeaderId::AGENT_UPDATE), "SMSG_AGENT_UPDATE" }, // Example
-               // Add known SMSG mappings here
-                { static_cast<uint8_t>(SMSG_HeaderId::PLACEHOLDER), "SMSG_PLACEHOLDER" }, // Example
-            };
-            return smsgNames;
-        }
-
-        inline const std::map<InternalPacketType, std::string>& GetSpecialTypeNameMap() {
-            static const std::map<InternalPacketType, std::string> specialNames = {
-                { InternalPacketType::ENCRYPTED_RC4, "Encrypted (RC4)"},
-                { InternalPacketType::UNKNOWN_HEADER, "Unknown Header"}, // This indicates the ID itself was unknown for the direction
-                { InternalPacketType::EMPTY_PACKET, "Empty Packet"},
-                { InternalPacketType::PROCESSING_ERROR, "Processing Error"},
-                // Note: NORMAL type doesn't usually need a name here, it uses the header name
-            };
-            return specialNames;
-        }
-
-        // Helper to format unknown headers
-        inline std::string FormatUnknownHeader(PacketDirection direction, uint8_t rawHeaderId) {
-            std::stringstream ss;
-            ss << (direction == PacketDirection::Sent ? "CMSG" : "SMSG")
-                << "_UNKNOWN [0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(rawHeaderId) << "]";
-            return ss.str();
-        }
-    } // namespace detail
 
 
     // --- Public API ---
@@ -108,13 +60,29 @@ namespace kx {
      *                     (e.g., "SMSG_UNKNOWN [0xAB]").
      */
     inline std::string GetPacketName(PacketDirection direction, uint8_t rawHeaderId) {
-        const auto& nameMap = (direction == PacketDirection::Sent) ? detail::GetCmsgNameMap() : detail::GetSmsgNameMap();
-        auto it = nameMap.find(rawHeaderId);
-        if (it != nameMap.end()) {
-            return it->second; // Return the found name
+        std::optional<std::string_view> name_sv;
+        std::string prefix;
+
+        if (direction == PacketDirection::Sent) {
+            prefix = "CMSG_";
+            if (auto value = magic_enum::enum_cast<CMSG_HeaderId>(rawHeaderId)) {
+                name_sv = magic_enum::enum_name(*value);
+            }
+        } else {
+            prefix = "SMSG_";
+            if (auto value = magic_enum::enum_cast<SMSG_HeaderId>(rawHeaderId)) {
+                name_sv = magic_enum::enum_name(*value);
+            }
         }
-        // Format and return unknown name if not found in the map for that direction
-        return detail::FormatUnknownHeader(direction, rawHeaderId);
+
+        if (name_sv) {
+            return prefix + std::string(*name_sv);
+        } else {
+            // Format unknown header directly
+            std::stringstream ss;
+            ss << prefix << "UNKNOWN [0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(rawHeaderId) << "]";
+            return ss.str();
+        }
     }
 
     /**
@@ -123,12 +91,8 @@ namespace kx {
     * @return std::string The corresponding name, or "Internal Error" if type not mapped.
     */
     inline std::string GetSpecialPacketTypeName(InternalPacketType type) {
-        const auto& specialNames = detail::GetSpecialTypeNameMap();
-        auto it = specialNames.find(type);
-        if (it != specialNames.end()) {
-            return it->second;
-        }
-        return "Internal Error Type"; // Fallback
+        // Directly return the name provided by magic_enum
+        return std::string(magic_enum::enum_name(type));
     }
 
 
@@ -138,13 +102,12 @@ namespace kx {
      */
     inline std::vector<std::pair<uint8_t, std::string>> GetKnownCMSGHeaders() {
         std::vector<std::pair<uint8_t, std::string>> headers;
-        const auto& map = detail::GetCmsgNameMap();
-        headers.reserve(map.size());
-        for (const auto& pair : map) {
-            headers.push_back(pair);
+        constexpr auto entries = magic_enum::enum_entries<CMSG_HeaderId>();
+        headers.reserve(entries.size());
+        for (const auto& [value, name_sv] : entries) {
+            headers.emplace_back(static_cast<uint8_t>(value), "CMSG_" + std::string(name_sv));
         }
-        // Consider sorting alphabetically by name if desired for UI
-        // std::sort(headers.begin(), headers.end(), [](const auto& a, const auto& b){ return a.second < b.second; });
+        // Consider sorting if needed
         return headers;
     }
 
@@ -154,14 +117,16 @@ namespace kx {
      */
     inline std::vector<std::pair<uint8_t, std::string>> GetKnownSMSGHeaders() {
         std::vector<std::pair<uint8_t, std::string>> headers;
-        const auto& map = detail::GetSmsgNameMap();
-        headers.reserve(map.size());
-        for (const auto& pair : map) {
-            // Skip placeholder if it exists and no other real headers are defined
-            if (map.size() == 1 && pair.first == static_cast<uint8_t>(SMSG_HeaderId::PLACEHOLDER)) {
+        constexpr auto entries = magic_enum::enum_entries<SMSG_HeaderId>();
+        headers.reserve(entries.size());
+        bool onlyPlaceholder = (entries.size() == 1 && entries[0].first == SMSG_HeaderId::PLACEHOLDER);
+
+        for (const auto& [value, name_sv] : entries) {
+            // Skip placeholder only if it's the *only* entry
+            if (onlyPlaceholder && value == SMSG_HeaderId::PLACEHOLDER) {
                 continue;
             }
-            headers.push_back(pair);
+            headers.emplace_back(static_cast<uint8_t>(value), "SMSG_" + std::string(name_sv));
         }
         // Consider sorting
         return headers;
@@ -173,17 +138,21 @@ namespace kx {
     */
     inline std::vector<std::pair<InternalPacketType, std::string>> GetSpecialPacketTypesForFilter() {
         std::vector<std::pair<InternalPacketType, std::string>> types;
-        const auto& map = detail::GetSpecialTypeNameMap();
-        types.reserve(map.size());
-        for (const auto& pair : map) {
-            types.push_back(pair);
+        constexpr auto entries = magic_enum::enum_entries<InternalPacketType>();
+        types.reserve(entries.size()); // Reserve approx size
+
+        for (const auto& [value, name_sv] : entries) {
+            // Skip NORMAL type as it's not usually filtered explicitly as a "special" type
+            if (value == InternalPacketType::NORMAL) {
+                continue;
+            }
+            // Use the name directly from GetSpecialPacketTypeName (which uses magic_enum)
+            types.emplace_back(value, GetSpecialPacketTypeName(value));
         }
-        // Can add others like UNKNOWN_HEADER if desired as separate filterable type
-        types.push_back({ InternalPacketType::UNKNOWN_HEADER, "Unknown Header ID" });
+        // Note: UNKNOWN_HEADER name is now directly from the enum via GetSpecialPacketTypeName
 
         // Sort maybe?
         return types;
     }
 
-
-} // namespace kx
+}
