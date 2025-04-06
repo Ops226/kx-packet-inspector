@@ -213,11 +213,10 @@ void ImGuiManager::RenderFilteringSection() {
                 ImGui::TreePop();
             }
 
-
             ImGui::Unindent();
             ImGui::EndChild();
         }
-        ImGui::Spacing();
+        ImGui::Separator();
     }
     ImGui::Spacing();
 }
@@ -265,7 +264,7 @@ void ImGuiManager::RenderPacketLogSection() {
     ImGui::Checkbox("Pause Capture", &kx::g_capturePaused);
     // --- End Log Controls ---
 
-    ImGui::Separator();
+    ImGui::Spacing();
 
     ImGui::BeginChild("PacketLogScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
 
