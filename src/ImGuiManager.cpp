@@ -241,15 +241,28 @@ void ImGuiManager::RenderPacketLogSection() {
         }
     } // Mutex released here
 
+    // --- Statistics Display ---
+    ImGui::Text("Packet Log (Showing: %zu / Total: %zu)", packets_to_render.size(), total_packets);
+
     // --- Log Controls ---
     if (ImGui::Button("Clear Log")) {
         std::lock_guard<std::mutex> lock(kx::g_packetLogMutex);
         kx::g_packetLog.clear();
     }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Copy All")) {
+        if (!packets_to_render.empty()) {
+            std::stringstream ss;
+            for (const auto& packet : packets_to_render) {
+                ss << kx::Utils::FormatFullLogEntryString(packet) << "\n";
+            }
+            ImGui::SetClipboardText(ss.str().c_str());
+        }
+    }
+
     ImGui::SameLine();
     ImGui::Checkbox("Pause Capture", &kx::g_capturePaused);
-
-    ImGui::Text("Packet Log (Showing: %zu / Total: %zu)", packets_to_render.size(), total_packets);
     // --- End Log Controls ---
 
     ImGui::Separator();
