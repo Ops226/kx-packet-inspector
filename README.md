@@ -8,7 +8,7 @@ KX Packet Inspector is a tool designed to intercept and display **both outgoing 
 
 The primary goal is to facilitate learning about the game's network protocol and potentially identify new or undocumented packet structures for both client-to-server (CMSG) and server-to-client (SMSG) communication.
 
-![KX Packet Inspector GUI](images/kx_inspector_imgui_v2.png)
+![KX Packet Inspector GUI](images/kx_inspector_gui_v1.2.png)
 
 ## Features
 
