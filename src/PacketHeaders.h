@@ -30,15 +30,15 @@ namespace kx {
     // --- Client->Server Header IDs ---
     enum class CMSG_HeaderId : uint16_t {
         MOVEMENT_END = 0x0004,
+        JUMP = 0x0009,
         MOVEMENT_WITH_ROTATION = 0x000B,
         HEARTBEAT = 0x0011,
         MOVEMENT = 0x0012,
         USE_SKILL = 0x0017,
         MOUNT_MOVEMENT = 0x0018,
-        JUMP = 0x0009,
-        // Note: Values above 256 (0x0100) won't work with magic_enum
         DESELECT_AGENT = 0x00DD,
         SELECT_AGENT = 0x00E5
+        // Note: Values above 256 (0x0100) won't work with magic_enum
     };
 
     // --- Server->Client Header IDs ---
