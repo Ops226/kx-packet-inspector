@@ -22,4 +22,9 @@ private:
     static void RenderFilteringSection();
     static void RenderPacketLogSection();
     static void RenderSinglePacketLogRow(const kx::PacketInfo& packet, int display_index);
+
+    // Helpers for RenderPacketLogSection
+    static std::vector<kx::PacketInfo> GetFilteredPacketsSnapshot(size_t& out_total_packets);
+    static void RenderPacketLogControls(size_t displayed_count, size_t total_count, const std::vector<kx::PacketInfo>& packets_to_render);
+    static void RenderPacketListWithClipping(const std::vector<kx::PacketInfo>& packets_to_render);
 };

@@ -1,3 +1,5 @@
+#define NOMINMAX
+
 #include "ImGuiManager.h"
 #include "../ImGui/imgui.h"
 #include "../ImGui/imgui_impl_win32.h"
@@ -265,14 +267,14 @@ void ImGuiManager::RenderSinglePacketLogRow(const kx::PacketInfo& packet, int di
     ImGui::PopID();
 }
 
-void ImGuiManager::RenderPacketLogSection() {
-    // Create a snapshot of packets to render to avoid holding lock during ImGui rendering
+// Acquires lock, filters packets, and returns a snapshot for rendering.
+std::vector<kx::PacketInfo> ImGuiManager::GetFilteredPacketsSnapshot(size_t& out_total_packets) {
     std::vector<kx::PacketInfo> packets_to_render;
-    size_t total_packets = 0;
+    out_total_packets = 0;
     {
-    	// Lock scope for accessing global log and creating copy
+        // Lock scope for accessing global log and creating copy
         std::lock_guard<std::mutex> lock(kx::g_packetLogMutex);
-        total_packets = kx::g_packetLog.size(); // Get total count first
+        out_total_packets = kx::g_packetLog.size(); // Get total count first
         std::vector<int> filtered_indices = kx::Filtering::GetFilteredPacketIndices(kx::g_packetLog);
 
         packets_to_render.reserve(filtered_indices.size());
@@ -283,15 +285,27 @@ void ImGuiManager::RenderPacketLogSection() {
             }
         }
     } // Mutex released here
+    return packets_to_render;
+}
 
-    // --- Statistics Display ---
-    ImGui::Text("Packet Log (Showing: %zu / Total: %zu)", packets_to_render.size(), total_packets);
+// Renders the control buttons (Clear, Copy All) and checkbox (Pause) for the packet log.
+void ImGuiManager::RenderPacketLogControls(size_t displayed_count, size_t total_count, const std::vector<kx::PacketInfo>& packets_to_render) {
+    // Define danger colors locally for the Clear Log button
+    const ImVec4 dangerRed       = ImVec4(220.0f / 255.0f, 53.0f / 255.0f, 69.0f / 255.0f, 1.0f);
+    const ImVec4 dangerRedHover  = ImVec4(std::min(dangerRed.x * 1.1f, 1.0f), std::min(dangerRed.y * 1.1f, 1.0f), std::min(dangerRed.z * 1.1f, 1.0f), 1.0f);
+    const ImVec4 dangerRedActive = ImVec4(std::max(dangerRed.x * 0.9f, 0.0f), std::max(dangerRed.y * 0.9f, 0.0f), std::max(dangerRed.z * 0.9f, 0.0f), 1.0f);
 
-    // --- Log Controls ---
+    // Apply danger color to Clear Log button
+    ImGui::PushStyleColor(ImGuiCol_Button, dangerRed);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, dangerRedHover);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, dangerRedActive);
+
     if (ImGui::Button("Clear Log")) {
         std::lock_guard<std::mutex> lock(kx::g_packetLogMutex);
         kx::g_packetLog.clear();
     }
+
+    ImGui::PopStyleColor(3); // Restore default button colors
 
     ImGui::SameLine();
     if (ImGui::Button("Copy All")) {
@@ -306,18 +320,16 @@ void ImGuiManager::RenderPacketLogSection() {
 
     ImGui::SameLine();
     ImGui::Checkbox("Pause Capture", &kx::g_capturePaused);
-    // --- End Log Controls ---
+}
 
-    ImGui::Spacing();
-
-    ImGui::BeginChild("PacketLogScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
-
+// Renders the list of packets using ImGuiListClipper for efficiency.
+void ImGuiManager::RenderPacketListWithClipping(const std::vector<kx::PacketInfo>& packets_to_render) {
     // Use clipper only if there are items to display in our copy
-    if (!packets_to_render.empty()) 
+    if (!packets_to_render.empty())
     {
         ImGuiListClipper clipper;
         clipper.Begin(packets_to_render.size());
-		while (clipper.Step()) 
+		while (clipper.Step())
         {
 			// No lock needed here, operating on packets_to_render copy
 			for (int display_index = clipper.DisplayStart; display_index < clipper.DisplayEnd; ++display_index)
@@ -326,11 +338,30 @@ void ImGuiManager::RenderPacketLogSection() {
 				RenderSinglePacketLogRow(packets_to_render[display_index], display_index);
 			}
 		}
-
         clipper.End();
     }
+}
 
-    // Auto-scroll to bottom if scrollbar is already at the end.
+void ImGuiManager::RenderPacketLogSection() {
+    // 1. Get packet data snapshot
+    size_t total_packets = 0;
+    std::vector<kx::PacketInfo> packets_to_render = GetFilteredPacketsSnapshot(total_packets);
+
+    // 2. Display statistics
+    ImGui::Text("Packet Log (Showing: %zu / Total: %zu)", packets_to_render.size(), total_packets);
+
+    // 3. Render controls
+    RenderPacketLogControls(packets_to_render.size(), total_packets, packets_to_render);
+
+    ImGui::Spacing();
+
+    // 4. Render scrolling list region
+    ImGui::BeginChild("PacketLogScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
+
+    // 5. Render packet list using clipper
+    RenderPacketListWithClipping(packets_to_render);
+
+    // 6. Handle auto-scrolling
     if (!packets_to_render.empty() && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
         ImGui::SetScrollHereY(1.0f);
     }
