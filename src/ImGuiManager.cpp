@@ -169,7 +169,7 @@ void ImGuiManager::RenderFilteringSection() {
             if (ImGui::TreeNode("Sent Headers (CMSG)")) {
                 for (auto& pair : kx::g_packetHeaderFilterSelection) {
                     if (pair.first.first == kx::PacketDirection::Sent) {
-                        uint8_t headerId = pair.first.second;
+                        uint16_t headerId = pair.first.second;
                         bool& selected = pair.second;
                         std::string name = kx::GetPacketName(kx::PacketDirection::Sent, headerId); // Get name again for display
                         ImGui::Checkbox(name.c_str(), &selected);
@@ -191,7 +191,7 @@ void ImGuiManager::RenderFilteringSection() {
                 if (hasSmsgHeaders) {
                     for (auto& pair : kx::g_packetHeaderFilterSelection) {
                         if (pair.first.first == kx::PacketDirection::Received) {
-                            uint8_t headerId = pair.first.second;
+                            uint16_t headerId = pair.first.second;
                             bool& selected = pair.second;
                             std::string name = kx::GetPacketName(kx::PacketDirection::Received, headerId);
                             ImGui::Checkbox(name.c_str(), &selected);

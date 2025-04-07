@@ -11,6 +11,9 @@
  * It also includes special values for representing internal states like encrypted packets.
  */
 
+#define MAGIC_ENUM_RANGE_MIN 0
+#define MAGIC_ENUM_RANGE_MAX 256
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -25,27 +28,26 @@
 namespace kx {
 
     // --- Client->Server Header IDs ---
-    enum class CMSG_HeaderId : uint8_t {
-        CHAT_SEND_MESSAGE = 0xF9,
-        USE_SKILL = 0x17,
-        MOVEMENT = 0x12,
-        MOVEMENT_WITH_ROTATION = 0x0B,
-        MOVEMENT_END = 0x04,
-        JUMP = 0x09,
-        HEARTBEAT = 0x11,
-        SELECT_AGENT = 0xDE,
-        DESELECT_AGENT = 0xD6,
-        MOUNT_MOVEMENT = 0x18,
-        // Add more CMSG IDs as they are identified
+    enum class CMSG_HeaderId : uint16_t {
+        MOVEMENT_END = 0x0004,
+        MOVEMENT_WITH_ROTATION = 0x000B,
+        HEARTBEAT = 0x0011,
+        MOVEMENT = 0x0012,
+        USE_SKILL = 0x0017,
+        MOUNT_MOVEMENT = 0x0018,
+        JUMP = 0x0009,
+        // Note: Values above 256 (0x0100) won't work with magic_enum
+        DESELECT_AGENT = 0x00DD,
+        SELECT_AGENT = 0x00E5
     };
 
     // --- Server->Client Header IDs ---
-    enum class SMSG_HeaderId : uint8_t {
-        // Example (replace with actual identified IDs)
-        // AGENT_UPDATE       = 0x??,
-        // CHAT_RECEIVE       = 0x??,
-        // SKILL_RESULT       = 0x??,
-        PLACEHOLDER = 0x00 // Remove or replace once real IDs are found
+    enum class SMSG_HeaderId : uint16_t {
+        // Example (replace with actual identified 2-byte IDs)
+        // AGENT_UPDATE       = 0x????,
+        // CHAT_RECEIVE       = 0x????,
+        // SKILL_RESULT       = 0x????,
+        PLACEHOLDER = 0x0000 // Remove or replace once real IDs are found
     };
 
 
@@ -55,11 +57,11 @@ namespace kx {
     /**
      * @brief Gets a descriptive string name for a packet based on its direction and raw header ID.
      * @param direction The direction of the packet (Sent or Received).
-     * @param rawHeaderId The uint8_t header ID read from the packet data.
+     * @param rawHeaderId The uint16_t header ID read from the packet data.
      * @return std::string The descriptive name (e.g., "CMSG_USE_SKILL") or a formatted unknown string
-     *                     (e.g., "SMSG_UNKNOWN [0xAB]").
+     *                     (e.g., "SMSG_UNKNOWN [0xABCD]").
      */
-    inline std::string GetPacketName(PacketDirection direction, uint8_t rawHeaderId) {
+    inline std::string GetPacketName(PacketDirection direction, uint16_t rawHeaderId) {
         std::optional<std::string_view> name_sv;
         std::string prefix;
 
@@ -80,7 +82,7 @@ namespace kx {
         } else {
             // Format unknown header directly
             std::stringstream ss;
-            ss << prefix << "UNKNOWN [0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(rawHeaderId) << "]";
+            ss << prefix << "UNKNOWN [0x" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(rawHeaderId) << "]";
             return ss.str();
         }
     }
@@ -100,12 +102,12 @@ namespace kx {
      * @brief Provides a list of known CMSG headers for UI population.
      * @return A vector of pairs, where each pair contains the {Header ID, Header Name}.
      */
-    inline std::vector<std::pair<uint8_t, std::string>> GetKnownCMSGHeaders() {
-        std::vector<std::pair<uint8_t, std::string>> headers;
+    inline std::vector<std::pair<uint16_t, std::string>> GetKnownCMSGHeaders() {
+        std::vector<std::pair<uint16_t, std::string>> headers;
         constexpr auto entries = magic_enum::enum_entries<CMSG_HeaderId>();
         headers.reserve(entries.size());
         for (const auto& [value, name_sv] : entries) {
-            headers.emplace_back(static_cast<uint8_t>(value), "CMSG_" + std::string(name_sv));
+            headers.emplace_back(static_cast<uint16_t>(value), "CMSG_" + std::string(name_sv));
         }
         // Consider sorting if needed
         return headers;
@@ -115,8 +117,8 @@ namespace kx {
      * @brief Provides a list of known SMSG headers for UI population.
      * @return A vector of pairs, where each pair contains the {Header ID, Header Name}.
      */
-    inline std::vector<std::pair<uint8_t, std::string>> GetKnownSMSGHeaders() {
-        std::vector<std::pair<uint8_t, std::string>> headers;
+    inline std::vector<std::pair<uint16_t, std::string>> GetKnownSMSGHeaders() {
+        std::vector<std::pair<uint16_t, std::string>> headers;
         constexpr auto entries = magic_enum::enum_entries<SMSG_HeaderId>();
         headers.reserve(entries.size());
         bool onlyPlaceholder = (entries.size() == 1 && entries[0].first == SMSG_HeaderId::PLACEHOLDER);
@@ -126,7 +128,7 @@ namespace kx {
             if (onlyPlaceholder && value == SMSG_HeaderId::PLACEHOLDER) {
                 continue;
             }
-            headers.emplace_back(static_cast<uint8_t>(value), "SMSG_" + std::string(name_sv));
+            headers.emplace_back(static_cast<uint16_t>(value), "SMSG_" + std::string(name_sv));
         }
         // Consider sorting
         return headers;

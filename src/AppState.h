@@ -35,7 +35,7 @@ namespace kx {
     extern FilterMode g_packetFilterMode;
 
     // Map Key: Pair of <Direction, HeaderID> -> Value: bool selected
-    extern std::map<std::pair<PacketDirection, uint8_t>, bool> g_packetHeaderFilterSelection;
+    extern std::map<std::pair<PacketDirection, uint16_t>, bool> g_packetHeaderFilterSelection;
 
     // Map Key: Special Type Enum -> Value: bool selected
     extern std::map<InternalPacketType, bool> g_specialPacketFilterSelection;

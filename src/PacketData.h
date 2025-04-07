@@ -23,7 +23,8 @@ namespace kx {
         ENCRYPTED_RC4,       // Packet identified as RC4 encrypted *before* decryption attempt
         UNKNOWN_HEADER,      // Header ID was not found in the known lists for its direction *after* potential decryption
         EMPTY_PACKET,        // Packet buffer was empty
-        PROCESSING_ERROR     // Error during processing/decryption prevented analysis
+        PROCESSING_ERROR,    // Error during processing/decryption prevented analysis
+        PACKET_TOO_SMALL     // Packet data buffer was smaller than the required header size (2 bytes)
     };
 
     // Forward declare the InternalPacketType enum
@@ -35,7 +36,7 @@ namespace kx {
         int size = 0;                      // Size of original data
         std::vector<uint8_t> data;         // Original (potentially encrypted) byte data
         PacketDirection direction;
-        uint8_t rawHeaderId = 0;           // Raw header byte (from decrypted data if applicable)
+        uint16_t rawHeaderId = 0;          // Raw 2-byte header (from decrypted data if applicable)
         std::string name = "Unprocessed";  // String name (resolved using direction + rawHeaderId or special type)
         int bufferState = -1;              // State read from MsgConn (-1: null ctx, -2: read err, >=0: actual state)
         InternalPacketType specialType = InternalPacketType::NORMAL; // Assume normal unless set otherwise
