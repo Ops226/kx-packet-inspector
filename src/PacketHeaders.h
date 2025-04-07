@@ -43,11 +43,7 @@ namespace kx {
 
     // --- Server->Client Header IDs ---
     enum class SMSG_HeaderId : uint16_t {
-        // Example (replace with actual identified 2-byte IDs)
-        // AGENT_UPDATE       = 0x????,
-        // CHAT_RECEIVE       = 0x????,
-        // SKILL_RESULT       = 0x????,
-        PLACEHOLDER = 0x0000 // Remove or replace once real IDs are found
+        PING_REQUEST = 0x000C,
     };
 
 
@@ -121,16 +117,10 @@ namespace kx {
         std::vector<std::pair<uint16_t, std::string>> headers;
         constexpr auto entries = magic_enum::enum_entries<SMSG_HeaderId>();
         headers.reserve(entries.size());
-        bool onlyPlaceholder = (entries.size() == 1 && entries[0].first == SMSG_HeaderId::PLACEHOLDER);
-
         for (const auto& [value, name_sv] : entries) {
-            // Skip placeholder only if it's the *only* entry
-            if (onlyPlaceholder && value == SMSG_HeaderId::PLACEHOLDER) {
-                continue;
-            }
             headers.emplace_back(static_cast<uint16_t>(value), "SMSG_" + std::string(name_sv));
         }
-        // Consider sorting
+
         return headers;
     }
 
