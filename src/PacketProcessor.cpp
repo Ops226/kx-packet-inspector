@@ -161,17 +161,26 @@ namespace kx::PacketProcessing {
             }
 
             // --- Decrypt Data if Applicable ---
-            bool wasDecrypted = false;
-            bool decryptionAttempted = false;
-            if (info.rc4State.has_value() && !info.data.empty()) {
-                decryptionAttempted = true; // Mark that we tried
-                // ... decryption logic using Crypto::rc4_process_copy ...
-                if (/* decryption successful */ true) { // Assume success for now
-                    // info.decryptedData = ... result ...
-                    wasDecrypted = true;
-                }
-                else {
+            // Attempt decryption if state indicates RC4 and we have state/data
+            if (currentState == 3 && info.rc4State.has_value() && !info.data.empty()) {
+                try {
+                    // Call the decryption function (returns a copy)
+                    info.decryptedData = kx::Crypto::rc4_process_copy(info.rc4State.value(), info.data);
+                    // If we reach here, decryption call succeeded, info.decryptedData is populated.
+                    // Note: rc4_process_copy doesn't explicitly signal failure,
+                    // but an exception during processing would be caught below.
+                } catch (const std::exception& e) {
+                    // Log decryption error
+                    char msg[256];
+                    sprintf_s(msg, sizeof(msg), "[PacketProcessor] Exception during RC4 decryption: %s\n", e.what());
+                    OutputDebugStringA(msg);
                     info.specialType = InternalPacketType::PROCESSING_ERROR; // Mark decryption failure
+                    info.name = GetSpecialPacketTypeName(info.specialType);
+                } catch (...) {
+                    // Log unknown decryption error
+                    OutputDebugStringA("[PacketProcessor] Unknown exception during RC4 decryption.\n");
+                    info.specialType = InternalPacketType::PROCESSING_ERROR; // Mark decryption failure
+                    info.name = GetSpecialPacketTypeName(info.specialType);
                 }
             }
             // --- End Decryption ---
@@ -181,24 +190,23 @@ namespace kx::PacketProcessing {
             const std::vector<uint8_t>& dataToAnalyze = info.GetDisplayData();
 
             // Prioritize special states
-            if (info.specialType == InternalPacketType::PROCESSING_ERROR) {
-                info.name = GetSpecialPacketTypeName(info.specialType);
-            }
-            else if (currentState == 3 && !wasDecrypted && !info.rc4State.has_value()) {
-                // If state was 3 but we failed to capture state, mark it specifically
-                info.specialType = InternalPacketType::ENCRYPTED_RC4; // Or a subtype?
-                info.name = "Encrypted (RC4 State Read Fail)";
-            }
-            else if (currentState == 3 && decryptionAttempted && !wasDecrypted) {
-                // If state was 3, we tried to decrypt but failed
-                info.specialType = InternalPacketType::ENCRYPTED_RC4; // Or a subtype?
-                info.name = "Encrypted (RC4 Decrypt Fail?)";
-            }
-            else if (currentState == 3 && !decryptionAttempted) {
-                // State was 3, but we didn't try decrypting (e.g., empty packet)
-                info.specialType = InternalPacketType::ENCRYPTED_RC4;
-                info.name = GetSpecialPacketTypeName(info.specialType); // Generic "Encrypted (RC4)"
-            }
+            // Prioritize error state if set during decryption
+            if (info.specialType != InternalPacketType::PROCESSING_ERROR) {
+                // If state was 3 but we couldn't decrypt (no state captured, or empty packet)
+                if (currentState == 3 && !info.decryptedData.has_value()) {
+                    info.specialType = InternalPacketType::ENCRYPTED_RC4;
+                    // Distinguish reason if possible
+                    if (!info.rc4State.has_value()) {
+                         info.name = "Encrypted (RC4 State Read Fail)";
+                    } else if (info.data.empty()) {
+                         info.name = "Encrypted (Empty RC4 Packet)";
+                    } else {
+                         info.name = GetSpecialPacketTypeName(info.specialType); // Generic "ENCRYPTED_RC4"
+                    }
+                }
+            // Note: The PROCESSING_ERROR case is handled above where the exception is caught.
+            // The case where decryption was attempted but failed is now covered by PROCESSING_ERROR.
+            // The case where state was 3 but decryption wasn't attempted (empty packet) is covered above.
             else if (dataToAnalyze.empty()) {
                 info.specialType = InternalPacketType::EMPTY_PACKET;
                 info.name = GetSpecialPacketTypeName(info.specialType);
@@ -214,6 +222,7 @@ namespace kx::PacketProcessing {
                     info.specialType = InternalPacketType::UNKNOWN_HEADER; // Mark specifically as unknown ID
                 }
             }
+        }
             // --- End Packet Analysis ---
 
 
