@@ -118,6 +118,11 @@ namespace kx::PacketProcessing {
                     info.name = GetSpecialPacketTypeName(info.specialType);
                 }
 
+                // Check if the resolved name indicates an unknown header ID
+                if (info.name.find("_UNKNOWN") != std::string::npos) {
+                    info.specialType = InternalPacketType::UNKNOWN_HEADER; // Mark specifically as unknown ID
+                }
+
                 // Log the packet
                 {
                     std::lock_guard<std::mutex> lock(g_packetLogMutex);

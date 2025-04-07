@@ -19,7 +19,7 @@ namespace kx::Filtering {
             bool foundInFilters = false;
 
             // Check against header filters if it's a normal/unknown header packet
-            if (packet.specialType == kx::InternalPacketType::NORMAL || packet.specialType == kx::InternalPacketType::UNKNOWN_HEADER) {
+            if (packet.specialType == kx::InternalPacketType::NORMAL) {
                 // Construct the key used in the global map
                 auto key = std::make_pair(packet.direction, packet.rawHeaderId);
                 auto it = kx::g_packetHeaderFilterSelection.find(key);
