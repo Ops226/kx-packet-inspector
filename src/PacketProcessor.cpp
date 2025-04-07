@@ -16,6 +16,35 @@
 #include <limits>
 #include <cstring> // For memcpy
 
+// Anonymous namespace for internal helper functions
+namespace {
+
+/**
+ * @brief Attempts to decrypt the packet data if RC4 encryption is indicated and possible.
+ * @param info The PacketInfo object, potentially modified with decryptedData or error state.
+ */
+void AttemptDecryption(kx::PacketInfo& info) {
+    // Attempt decryption only if state indicates RC4, we have state, and data exists
+    if (info.bufferState == 3 && info.rc4State.has_value() && !info.data.empty()) {
+        try {
+            info.decryptedData = kx::Crypto::rc4_process_copy(info.rc4State.value(), info.data);
+            // Decryption call succeeded if no exception was thrown
+        } catch (const std::exception& e) {
+            char msg[256];
+            sprintf_s(msg, sizeof(msg), "[PacketProcessor] Exception during RC4 decryption: %s\n", e.what());
+            OutputDebugStringA(msg);
+            info.specialType = kx::InternalPacketType::PROCESSING_ERROR; // Mark decryption failure
+            info.name = kx::GetSpecialPacketTypeName(info.specialType);
+        } catch (...) {
+            OutputDebugStringA("[PacketProcessor] Unknown exception during RC4 decryption.\n");
+            info.specialType = kx::InternalPacketType::PROCESSING_ERROR; // Mark decryption failure
+            info.name = kx::GetSpecialPacketTypeName(info.specialType);
+        }
+    }
+}
+
+} // anonymous namespace
+
 namespace kx::PacketProcessing {
 
     void ProcessOutgoingPacket(const GameStructs::MsgSendContext* context) {
@@ -106,13 +135,11 @@ namespace kx::PacketProcessing {
             }
         }
         catch (const std::exception& e) {
-            // Log::Error("[ProcessOutgoingPacket] Exception: %s", e.what());
             char msg[256];
             sprintf_s(msg, sizeof(msg), "[PacketProcessor] Outgoing packet processing exception: %s\n", e.what());
             OutputDebugStringA(msg);
         }
         catch (...) {
-            // Log::Error("[ProcessOutgoingPacket] Unknown exception.");
             OutputDebugStringA("[PacketProcessor] Unknown exception during outgoing packet processing.\n");
         }
     }
@@ -160,89 +187,60 @@ namespace kx::PacketProcessing {
                 info.data.assign(buffer, buffer + size);
             }
 
-            // --- Decrypt Data if Applicable ---
-            // Attempt decryption if state indicates RC4 and we have state/data
-            if (currentState == 3 && info.rc4State.has_value() && !info.data.empty()) {
-                try {
-                    // Call the decryption function (returns a copy)
-                    info.decryptedData = kx::Crypto::rc4_process_copy(info.rc4State.value(), info.data);
-                    // If we reach here, decryption call succeeded, info.decryptedData is populated.
-                    // Note: rc4_process_copy doesn't explicitly signal failure,
-                    // but an exception during processing would be caught below.
-                } catch (const std::exception& e) {
-                    // Log decryption error
-                    char msg[256];
-                    sprintf_s(msg, sizeof(msg), "[PacketProcessor] Exception during RC4 decryption: %s\n", e.what());
-                    OutputDebugStringA(msg);
-                    info.specialType = InternalPacketType::PROCESSING_ERROR; // Mark decryption failure
-                    info.name = GetSpecialPacketTypeName(info.specialType);
-                } catch (...) {
-                    // Log unknown decryption error
-                    OutputDebugStringA("[PacketProcessor] Unknown exception during RC4 decryption.\n");
-                    info.specialType = InternalPacketType::PROCESSING_ERROR; // Mark decryption failure
-                    info.name = GetSpecialPacketTypeName(info.specialType);
-                }
-            }
-            // --- End Decryption ---
+            // Step 1: Attempt Decryption (modifies info if applicable)
+            AttemptDecryption(info);
 
-
-            // --- Packet Analysis ---
-            const std::vector<uint8_t>& dataToAnalyze = info.GetDisplayData();
-
-            // Prioritize special states
-            // Prioritize error state if set during decryption
+            // Step 2: Analyze Packet Content (sets final type and name)
+            // This logic runs only if AttemptDecryption didn't set PROCESSING_ERROR
             if (info.specialType != InternalPacketType::PROCESSING_ERROR) {
-                // If state was 3 but we couldn't decrypt (no state captured, or empty packet)
-                if (currentState == 3 && !info.decryptedData.has_value()) {
+				const std::vector<uint8_t>& dataToAnalyze = info.GetDisplayData();
+
+                // Case 1: State was 3 (RC4 expected) but we don't have decrypted data
+                if (info.bufferState == 3 && !info.decryptedData.has_value()) {
                     info.specialType = InternalPacketType::ENCRYPTED_RC4;
-                    // Distinguish reason if possible
+                    // Provide more specific names based on why decryption didn't happen
                     if (!info.rc4State.has_value()) {
-                         info.name = "Encrypted (RC4 State Read Fail)";
+                        info.name = "Encrypted (RC4 State Read Fail)";
                     } else if (info.data.empty()) {
-                         info.name = "Encrypted (Empty RC4 Packet)";
+                        info.name = "Encrypted (Empty RC4 Packet)";
                     } else {
-                         info.name = GetSpecialPacketTypeName(info.specialType); // Generic "ENCRYPTED_RC4"
+                        // Should not happen if state was captured and data wasn't empty,
+                        // implies decryption failed silently? Or logic error.
+                        info.name = GetSpecialPacketTypeName(info.specialType); // Generic "ENCRYPTED_RC4"
                     }
                 }
-            // Note: The PROCESSING_ERROR case is handled above where the exception is caught.
-            // The case where decryption was attempted but failed is now covered by PROCESSING_ERROR.
-            // The case where state was 3 but decryption wasn't attempted (empty packet) is covered above.
-            else if (dataToAnalyze.empty()) {
-                info.specialType = InternalPacketType::EMPTY_PACKET;
-                info.name = GetSpecialPacketTypeName(info.specialType);
-            }
-            else {
-                // If none of the above, it's a "NORMAL" packet (decrypted or plaintext)
-                info.specialType = InternalPacketType::NORMAL;
-                info.rawHeaderId = dataToAnalyze[0];
-                info.name = GetPacketName(info.direction, info.rawHeaderId); // Use directional lookup
+                // Case 2: The data buffer to analyze is empty (original was empty, or decryption resulted in empty?)
+                else if (dataToAnalyze.empty()) {
+                    info.specialType = InternalPacketType::EMPTY_PACKET;
+                    info.name = GetSpecialPacketTypeName(info.specialType);
+                }
+                // Case 3: Normal processing (plaintext or successfully decrypted)
+                else {
+                    info.specialType = InternalPacketType::NORMAL;
+                    info.rawHeaderId = dataToAnalyze[0]; // Get header from the data we are analyzing
+                    info.name = GetPacketName(info.direction, info.rawHeaderId);
 
-                // Check if GetPacketName returned an "Unknown" formatted string
-                if (info.name.find("_UNKNOWN") != std::string::npos) {
-                    info.specialType = InternalPacketType::UNKNOWN_HEADER; // Mark specifically as unknown ID
+                    // Refine type if the header ID is unknown
+                    if (info.name.find("_UNKNOWN") != std::string::npos) {
+                        info.specialType = InternalPacketType::UNKNOWN_HEADER;
+                    }
                 }
             }
-        }
-            // --- End Packet Analysis ---
 
-
-            // Log the processed packet info
+            // Step 3: Log the packet info
             {
                 std::lock_guard<std::mutex> lock(g_packetLogMutex);
                 g_packetLog.push_back(std::move(info));
             }
         }
         catch (const std::exception& e) {
-            // Log::Error("[ProcessIncomingPacket] Exception: %s", e.what());
             char msg[256];
             sprintf_s(msg, sizeof(msg), "[PacketProcessor] Incoming packet processing exception: %s\n", e.what());
             OutputDebugStringA(msg);
         }
         catch (...) {
-            // Log::Error("[ProcessIncomingPacket] Unknown exception.");
             OutputDebugStringA("[PacketProcessor] Unknown exception during incoming packet processing.\n");
         }
     }
-
 
 } // namespace kx::PacketProcessing
