@@ -1,5 +1,8 @@
 #pragma once
 
+#include "PacketData.h"
+#include <vector>
+
 #include <d3d11.h>
 #pragma comment(lib, "d3d11.lib")
 
@@ -18,4 +21,5 @@ private:
     static void RenderStatusControlsSection();
     static void RenderFilteringSection();
     static void RenderPacketLogSection();
+    static void RenderSinglePacketLogRow(const kx::PacketInfo& packet, int display_index);
 };

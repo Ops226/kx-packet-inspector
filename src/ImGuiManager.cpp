@@ -222,6 +222,49 @@ void ImGuiManager::RenderFilteringSection() {
     ImGui::Spacing();
 }
 
+// Helper function to render a single row in the packet log
+void ImGuiManager::RenderSinglePacketLogRow(const kx::PacketInfo& packet, int display_index) {
+    std::string displayLogEntry = kx::Utils::FormatDisplayLogEntryString(packet);
+    auto parsedDataStr = kx::Parsing::GetParsedDataTooltipString(packet);
+
+    ImGui::PushID(display_index);
+
+    // --- Color Coding ---
+    ImVec4 textColor;
+    if (packet.direction == kx::PacketDirection::Sent) {
+        textColor = ImVec4(0.4f, 0.7f, 1.0f, 1.0f); // Light Blue for Sent
+    } else { // Received
+        textColor = ImVec4(0.4f, 1.0f, 0.7f, 1.0f); // Light Green for Received
+    }
+    ImGui::PushStyleColor(ImGuiCol_Text, textColor);
+    // --- End Color Coding ---
+
+    // Calculate width needed for the copy button to make the input text fill remaining space
+    float buttonWidth = ImGui::CalcTextSize("Copy").x + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetStyle().ItemSpacing.x;
+    ImGui::PushItemWidth(-buttonWidth); // Negative width means fill available space minus button width
+    ImGui::InputText("##Pkt", (char*)displayLogEntry.c_str(), displayLogEntry.size() + 1, ImGuiInputTextFlags_ReadOnly);
+    ImGui::PopItemWidth();
+    ImGui::PopStyleColor(); // Pop text color style
+
+    // --- Tooltip for Parsed Data ---
+    if (ImGui::IsItemHovered() && parsedDataStr.has_value()) {
+        ImGui::BeginTooltip();
+        ImGui::TextUnformatted(parsedDataStr->c_str()); // Display the pre-formatted string
+        ImGui::EndTooltip();
+    }
+    // --- End Tooltip ---
+
+    ImGui::SameLine();
+
+    // Copy button: generate and copy full log entry string on click.
+    if (ImGui::SmallButton("Copy")) {
+        std::string fullLogEntry = kx::Utils::FormatFullLogEntryString(packet);
+        ImGui::SetClipboardText(fullLogEntry.c_str());
+    }
+
+    ImGui::PopID();
+}
+
 void ImGuiManager::RenderPacketLogSection() {
     // Create a snapshot of packets to render to avoid holding lock during ImGui rendering
     std::vector<kx::PacketInfo> packets_to_render;
@@ -278,50 +321,9 @@ void ImGuiManager::RenderPacketLogSection() {
         {
 			// No lock needed here, operating on packets_to_render copy
 			for (int display_index = clipper.DisplayStart; display_index < clipper.DisplayEnd; ++display_index)
-            {
-	            // Index validation is implicitly handled by iterating up to packets_to_render.size()
-	            const auto& packet = packets_to_render[display_index];
-
-	            std::string displayLogEntry = kx::Utils::FormatDisplayLogEntryString(packet);
-
-	            // Attempt to get formatted parsed data string
-	            auto parsedDataStr = kx::Parsing::GetParsedDataTooltipString(packet);
-
-	            ImGui::PushID(display_index);
-
-	            // --- Color Coding ---
-	            ImVec4 textColor;
-	            if (packet.direction == kx::PacketDirection::Sent) {
-	                textColor = ImVec4(0.4f, 0.7f, 1.0f, 1.0f); // Light Blue for Sent
-	            } else { // Received
-	                textColor = ImVec4(0.4f, 1.0f, 0.7f, 1.0f); // Light Green for Received
-	            }
-	            ImGui::PushStyleColor(ImGuiCol_Text, textColor);
-	            // --- End Color Coding ---
-
-	            float buttonWidth = ImGui::CalcTextSize("Copy").x + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetStyle().ItemSpacing.x;
-	            ImGui::PushItemWidth(-buttonWidth);
-	            ImGui::InputText("##Pkt", (char*)displayLogEntry.c_str(), displayLogEntry.size() + 1, ImGuiInputTextFlags_ReadOnly);
-	            ImGui::PopItemWidth();
-	            ImGui::PopStyleColor();
-
-	            // --- Tooltip for Parsed Data ---
-	            if (ImGui::IsItemHovered() && parsedDataStr.has_value()) {
-	                ImGui::BeginTooltip();
-	                ImGui::TextUnformatted(parsedDataStr->c_str()); // Display the pre-formatted string
-	                ImGui::EndTooltip();
-	            }
-	            // --- End Tooltip ---
-
-	            ImGui::SameLine();
-
-	            // Copy button: generate and copy full log entry string on click.
-	            if (ImGui::SmallButton("Copy")) {
-	                std::string fullLogEntry = kx::Utils::FormatFullLogEntryString(packet);
-	                ImGui::SetClipboardText(fullLogEntry.c_str());
-	            }
-
-	            ImGui::PopID();
+			{
+				// Call the helper function to render the row
+				RenderSinglePacketLogRow(packets_to_render[display_index], display_index);
 			}
 		}
 
