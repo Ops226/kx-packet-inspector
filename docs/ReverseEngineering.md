@@ -28,7 +28,6 @@ Function addresses are relative to the `Gw2-64.exe` module base. Patterns are ID
 
 ### Outgoing Packets (MsgSend)
 
-*   **Function Address (Approx):** `+0x012E9960` (Relative to base, requires scanning)
 *   **Internal Name:** `FUN_1412e9960` (Ghidra/IDA Auto-name)
 *   **Pattern:** `40 ? 48 83 EC ? 48 8D ? ? ? 48 89 ? ? 48 89 ? ? 48 89 ? ? 4C 89 ? ? 48 8B ? ? ? ? ? 48 33 ? 48 89 ? ? 48 8B ? E8`
 *   **Purpose:** Prepares outgoing packets, potentially including encryption if `bufferState == 3`.
@@ -37,7 +36,6 @@ Function addresses are relative to the `Gw2-64.exe` module base. Patterns are ID
 
 ### Incoming Packets (MsgDispatch)
 
-*   **Function Address (Approx):** `+0x012E9390` (Relative to base, requires scanning)
 *   **Internal Name:** `FUN_1412e9390` (`Msg::DispatchStream`)
 *   **Pattern:** `48 89 5C 24 ? 4C 89 44 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8B EC 48 83 EC ? 8B 82`
 *   **Purpose:** Processes an already decrypted/decompressed buffer containing one or more framed messages. Iterates through messages, looks up handlers, and calls the appropriate handler function for each message.

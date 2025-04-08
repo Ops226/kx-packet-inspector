@@ -13,14 +13,14 @@ The primary goal is to facilitate learning about the game's network protocol and
 ## Features
 
 *   **Real-time Bidirectional Packet Logging:** Captures and displays **sent (CMSG)** and **received (SMSG)** packet information (timestamp, direction, header ID, size, raw hex data).
-*   **RC4 Decryption Attempt:** Attempts to decrypt incoming packets if the connection state indicates RC4 encryption and the state can be captured.
-*   **Packet Identification:** Attempts to identify known CMSG and SMSG packet headers based on their first byte (after potential decryption for received packets). Handles unknown headers gracefully.
+*   **Individual Message Capture (SMSG):** Hooks the game's internal message dispatcher to capture **individual, framed, plaintext** Server-to-Client messages *after* decryption and decompression have been handled by the game itself.
+*   **Packet Identification:** Attempts to identify known CMSG and SMSG packet headers based on their 2-byte opcode. Handles unknown headers gracefully, displaying the raw ID.
 *   **ImGui Interface:** Provides a clean in-game overlay to view packets, filter them, and control capture.
 *   **Flexible Filtering:**
     *   Filter by direction (Show All / Sent Only / Received Only).
     *   Filter by header/type (Show All / Include Checked / Exclude Checked).
-    *   Checkboxes provided for known CMSG, known SMSG, and special types (Encrypted, Unknown, Empty).
-*   **Clipboard Support:** Copy individual log lines to the clipboard.
+    *   Checkboxes provided for known CMSG, known SMSG, and special internal types (Unknown Header, Empty, etc.).
+*   **Clipboard Support:** Copy individual log lines or the **entire current log content** to the clipboard.
 *   **Controls:** Pause/resume capture, clear the log.
 *   **Hotkeys:**
     *   `INSERT`: Show/Hide the Inspector window.
@@ -28,10 +28,10 @@ The primary goal is to facilitate learning about the game's network protocol and
 
 ## Status & Compatibility
 
-This tool targets specific internal functions identified via pattern scanning. Packet *parsing* logic (in `GameStructs.h` and `PacketProcessor.cpp`) relies on structure offsets and behaviors derived from reverse engineering specific game versions.
+This tool targets specific internal functions identified via pattern scanning. Packet parsing logic relies on structure offsets and behaviors derived from reverse engineering specific game versions. See the [Reverse Engineering Notes](docs/ReverseEngineering.md) for details on current targets and assumptions.
 
 *   **Potential Stability:** Core hooking (DirectX, function interception via patterns) may remain functional across some game patches.
-*   **Potential Breakage:** Significant game updates that modify internal network code, encryption methods, or data structure layouts **may break** this tool. This could affect function patterns, structure offsets (`GameStructs.h`), buffer state interpretation, or decryption logic (`CryptoUtils.cpp`, `PacketProcessor.cpp`).
+*   **Potential Breakage:** Significant game updates that modify internal network code, encryption methods, or data structure layouts **may break** this tool. This could affect function patterns, structure offsets (`GameStructs.h`), buffer state interpretation, or internal message processing logic (`PacketProcessor.cpp`).
 *   **Maintenance:** We will try to keep the tool updated if major breakages occur. However, community contributions for identifying issues and providing updated offsets, patterns, or logic are highly encouraged!
 
 ## Building
@@ -71,7 +71,7 @@ This project is open source, and community involvement is highly welcome! Here a
 *   **[X] Log Received Packets:** *(Implemented)* - Tool now logs both sent and received packets.
 *   **[ ] Identify More Packet Headers:** The `PacketHeaders.h` file contains only a small subset of known packets. Researching, identifying, and adding more headers (especially **SMSG**) with their correct IDs and names would greatly improve the tool's utility.
 *   **[ ] Improve Packet Parsing:** Define structures for the *payload* of known packets (both CMSG and SMSG) to automatically parse and display their fields instead of just raw hex data. This is the core area for community contribution.
-*   **[ ] Refine Decryption:** Investigate if other encryption/compression methods are used and implement support if possible. Improve robustness of RC4 state capture.
+*   **[ ] Refine Packet Processing:** Investigate potential compression or other encoding methods used by the game.
 *   **[ ] Update Structure Offsets/Patterns:** If game updates break the tool, help reverse engineer the new function patterns or structure offsets.
 *   **[ ] Bug Fixes & Enhancements:** Improve the UI, add new features (e.g., saving logs, search), fix bugs.
 
@@ -83,6 +83,7 @@ Feel free to fork the repository, make changes, and submit Pull Requests!
 *   Uses [Dear ImGui](https://github.com/ocornut/imgui).
 *   Uses [MinHook](https://github.com/TsudaKageyu/minhook).
 *   Uses [Magic Enum](https://github.com/Neargye/magic_enum).
+*   Uses [SafetyHook](https://github.com/cursey/safetyhook).
 
 ## Community & Contact
 
