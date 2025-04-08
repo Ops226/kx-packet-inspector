@@ -21,7 +21,7 @@
 #include <iomanip>
 #include <utility> // For std::pair
 #include <string_view> // For magic_enum results
-#include "../MagicEnum/magic_enum.hpp"
+#include "../libs/MagicEnum/magic_enum.hpp"
 
 #include "PacketData.h" // Required for PacketDirection enum definition
 

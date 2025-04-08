@@ -10,13 +10,13 @@
 #define NOMINMAX
 #include <windows.h>
 #include <cstdint> // For uintptr_t
-#include "../MinHook/MinHook.h" // Adjust path as necessary
+#include "../libs/MinHook/MinHook.h" // Adjust path as necessary
 
  // Link MinHook lib (consider moving linker directives to project settings)
 #if _WIN64
-#pragma comment(lib, "MinHook/libMinHook.x64.lib")
+#pragma comment(lib, "libs/MinHook/libMinHook.x64.lib")
 #else
-#pragma comment(lib, "MinHook/libMinHook.x86.lib")
+#pragma comment(lib, "libs/MinHook/libMinHook.x86.lib")
 #endif
 
 /**

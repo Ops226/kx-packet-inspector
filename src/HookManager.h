@@ -1,12 +1,12 @@
 #pragma once
 
 #include <windows.h>
-#include "../MinHook/MinHook.h"
+#include "../libs/MinHook/MinHook.h"
 
 #if _WIN64
-#pragma comment(lib, "MinHook/libMinHook.x64.lib")
+#pragma comment(lib, "libs/MinHook/libMinHook.x64.lib")
 #else
-#pragma comment(lib, "MinHook/libMinHook.x86.lib")
+#pragma comment(lib, "libs/MinHook/libMinHook.x86.lib")
 #endif
 
 namespace kx::Hooking {
