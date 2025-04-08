@@ -12,15 +12,20 @@ namespace kx::Utils {
     // --- Function Implementations ---
 
     std::string FormatTimestamp(const std::chrono::system_clock::time_point& tp) {
+        // Convert to time_t for HH:MM:SS
         std::time_t time = std::chrono::system_clock::to_time_t(tp);
         std::tm local_tm;
-        localtime_s(&local_tm, &time); // Use localtime_s for safety
+        localtime_s(&local_tm, &time); // Use safe version
+
+        // Get milliseconds
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()) % 1000;
 
         std::stringstream ss;
+        // Format HH:MM:SS
         ss << std::put_time(&local_tm, "%H:%M:%S");
-        // Optional: milliseconds
-        // auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()) % 1000;
-        // ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+        // Append milliseconds, padded with zeros
+        ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+
         return ss.str();
     }
 
@@ -65,34 +70,36 @@ namespace kx::Utils {
     std::string FormatDisplayLogEntryString(const PacketInfo& packet, int maxHexBytes) {
         std::string timestampStr = FormatTimestamp(packet.timestamp);
         const char* directionStr = (packet.direction == PacketDirection::Sent) ? "[S]" : "[R]";
-        const auto& dataToDisplay = packet.data;
-        int displaySize = dataToDisplay.size();
+        int displaySize = static_cast<int>(packet.data.size());
 
-        // *** Use the maxHexBytes parameter for display ***
-        std::string dataHexStr = FormatBytesToHex(dataToDisplay, maxHexBytes);
+        std::string dataHexStr = FormatBytesToHex(packet.data, maxHexBytes);
 
         std::stringstream ss;
-        ss << timestampStr << " " << directionStr << " "
-            << packet.name // Use the pre-resolved name
-            << " | Sz:" << displaySize
-            << " | " << dataHexStr;
+        ss << timestampStr << " "         // Timestamp (HH:MM:SS.mmm)
+            << directionStr << " "         // Direction ([S] or [R])
+            << packet.name << " "          // Resolved Name
+            << "Op:0x" << std::hex << std::setw(4) << std::setfill('0') << packet.rawHeaderId << std::dec // Opcode (Op:0xABCD)
+            << " | Sz:" << displaySize     // Size (Sz:N)
+            << " | " << dataHexStr;        // Hex Data (potentially truncated)
+
         return ss.str();
     }
 
     std::string FormatFullLogEntryString(const PacketInfo& packet) {
         std::string timestampStr = FormatTimestamp(packet.timestamp);
         const char* directionStr = (packet.direction == PacketDirection::Sent) ? "[S]" : "[R]";
-        const auto& dataToDisplay = packet.data;
-        int displaySize = dataToDisplay.size();
+        int displaySize = static_cast<int>(packet.data.size());
 
-        // *** Call FormatBytesToHex with -1 (or 0) for no limit ***
-        std::string dataHexStr = FormatBytesToHex(dataToDisplay, -1); // Use -1 for unlimited
+        std::string dataHexStr = FormatBytesToHex(packet.data, -1); // Format full hex data
 
         std::stringstream ss;
-        ss << timestampStr << " " << directionStr << " "
-            << packet.name
-            << " | Sz:" << displaySize
-            << " | " << dataHexStr;
+        ss << timestampStr << " "         // Timestamp (HH:MM:SS.mmm)
+            << directionStr << " "         // Direction ([S] or [R])
+            << packet.name << " "          // Resolved Name
+            << "Op:0x" << std::hex << std::setw(4) << std::setfill('0') << packet.rawHeaderId << std::dec // Opcode (Op:0xABCD)
+            << " | Sz:" << displaySize     // Size (Sz:N)
+            << " | " << dataHexStr;        // Hex Data (full)
+
         return ss.str();
     }
 
