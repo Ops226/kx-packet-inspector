@@ -46,7 +46,7 @@ namespace kx::Parsing {
             return std::nullopt; // Not the packet type we're looking for
         }
 
-        const std::vector<uint8_t>& data = packet.GetDisplayData();
+        const std::vector<uint8_t>& data = packet.data;
         constexpr size_t required_size = sizeof(kx::Packets::MovementPayload);
         constexpr size_t assumed_offset_from_end = 16;
 

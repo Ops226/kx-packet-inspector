@@ -2,6 +2,8 @@
 #include "AppState.h"        // For setting status flags
 #include "Config.h"          // For patterns/process name
 #include "PatternScanner.h"  // For finding game functions
+#include "MessageHandlerHook.h"
+
 #include <iostream>          // Replace with logging
 
 namespace kx {
@@ -42,35 +44,35 @@ namespace kx {
             }
         }
 
-        bool InitializeMsgRecvHook() {
-            g_msgRecvHookStatus = HookStatus::Unknown;
-            g_msgRecvAddress = 0;
+        bool InitializeMessageHandlerHook() {
+            g_msgRecvHookStatus = HookStatus::Unknown; // Use Recv status flag
+            g_msgRecvAddress = 0; // Base address of dispatcher
 
-            std::cout << "Scanning for MsgRecv pattern..." << std::endl;
-            std::optional<uintptr_t> msgRecvAddrOpt = kx::PatternScanner::FindPattern(
-                std::string(kx::MSG_RECV_PATTERN),
+            std::cout << "Scanning for MsgDispatch pattern..." << std::endl;
+            std::optional<uintptr_t> msgDispatchAddrOpt = kx::PatternScanner::FindPattern(
+                std::string(kx::MSG_DISPATCH_PATTERN), // Use dispatcher pattern
                 std::string(kx::TARGET_PROCESS_NAME)
             );
 
-            if (!msgRecvAddrOpt) {
-                std::cerr << "[GameHooks] MsgRecv pattern not found. Hook skipped." << std::endl;
-                g_msgRecvHookStatus = HookStatus::Failed; // Or "NotFound"
-                return true; // Non-fatal
+            if (!msgDispatchAddrOpt) {
+                std::cerr << "[GameHooks] MsgDispatch pattern not found. Hook skipped." << std::endl;
+                g_msgRecvHookStatus = HookStatus::Failed;
+                return true;
             }
 
-            g_msgRecvAddress = *msgRecvAddrOpt;
-            std::cout << "[GameHooks] MsgRecv pattern found at: 0x" << std::hex << g_msgRecvAddress << std::dec << std::endl;
+            g_msgRecvAddress = *msgDispatchAddrOpt; // Store dispatcher base address
+            std::cout << "[GameHooks] MsgDispatch pattern found at: 0x" << std::hex << g_msgRecvAddress << std::dec << std::endl;
 
-            // Use existing MsgRecvHook.h logic, assuming it uses HookManager now
-            if (::InitializeMsgRecvHook(g_msgRecvAddress)) { // Call global function from MsgRecvHook.h
+            // Call the new initializer, passing the dispatcher base address
+            if (::InitializeMessageHandlerHooks(g_msgRecvAddress)) { // <<< CHANGED
                 g_msgRecvHookStatus = HookStatus::OK;
-                std::cout << "[GameHooks] MsgRecv hook initialized." << std::endl;
+                std::cout << "[GameHooks] Message Handler hooks initialized." << std::endl;
                 return true;
             }
             else {
-                std::cerr << "[GameHooks] Failed to initialize MsgRecv hook." << std::endl;
+                std::cerr << "[GameHooks] Failed to initialize Message Handler hooks." << std::endl;
                 g_msgRecvHookStatus = HookStatus::Failed;
-                return false; // Hooking failed
+                return false;
             }
         }
 
@@ -78,7 +80,7 @@ namespace kx {
             // Call specific cleanup if needed (e.g., freeing resources specific to the hook)
             // These functions might become empty if all cleanup is handled by HookManager::Shutdown
             ::CleanupMsgSendHook();
-            ::CleanupMsgRecvHook();
+            ::CleanupMessageHandlerHooks();
             std::cout << "[GameHooks] Shutdown complete." << std::endl;
         }
 
@@ -112,7 +114,7 @@ namespace kx {
         // 3. Initialize Game-Specific Hooks (MsgSend, MsgRecv)
         // We consider these non-fatal for now if they fail (e.g., pattern not found)
         GameHooks::InitializeMsgSendHook();
-        GameHooks::InitializeMsgRecvHook();
+        GameHooks::InitializeMessageHandlerHook();
 
         std::cout << "[Hooks] Overall initialization finished." << std::endl;
         return true; // Return true even if game hooks failed, as Present hook is OK
