@@ -1,13 +1,10 @@
-// MessageHandlerHook.cpp
-
-#include <windows.h> // Include windows.h early to establish platform definitions
+#include <windows.h> // Ensure windows.h is included first for platform definitions
 #include "MessageHandlerHook.h"
 #include "safetyhook.hpp"    // SafetyHook library for mid-function hooking
 #include "PacketProcessor.h" // For ProcessDispatchedMessage
 #include "PacketData.h"      // For PacketDirection enum
 #include "GameStructs.h"     // For MSGCONN_*, HANDLER_INFO_*, MSG_DEF_* constants
 
-// Standard Library Includes
 #include <iostream>          // For std::cerr (initialization errors)
 #include <iomanip>           // Potentially for hex formatting in debug logs
 #include <mutex>             // If needed for shared resources (currently only debug output)
@@ -47,12 +44,11 @@ void hookHandlerCallSite(SafetyHookContext& ctx)
     // Optional: Uncomment for verbose hook entry debugging.
     // OutputDebugStringA("[hookHandlerCallSite] MidHook Entered.\n");
 
-    // Pointers and values to extract
-    void* pMsgConn = nullptr;       // Pointer to the connection context object
-    void* messageDataPtr = nullptr; // Pointer to the start of the current message's data payload
-    void* handlerInfoPtr = nullptr; // Pointer to the 32-byte handler info structure
-    uint16_t messageId = 0;         // The 2-byte message opcode
-    uint32_t messageSize = 0;       // Size of the message data payload
+    void* pMsgConn = nullptr;
+    void* messageDataPtr = nullptr;
+    void* handlerInfoPtr = nullptr;
+    uint16_t messageId = 0;
+    uint32_t messageSize = 0;
 
     try {
         // Extract MsgConn pointer from RBX register (as observed in dispatcher assembly)
@@ -68,18 +64,16 @@ void hookHandlerCallSite(SafetyHookContext& ctx)
         else {
             // This should not happen in standard function execution but is a safeguard.
             OutputDebugStringA("[hookHandlerCallSite] Error: RBP register is NULL in context! Cannot get message data ptr.\n");
-            return; // Cannot proceed without RBP to find the data pointer
+            return;
         }
 
-        // --- Validate essential pointers ---
         if (pMsgConn == nullptr) {
             // This would indicate a serious issue if RBX wasn't holding the context.
             OutputDebugStringA("[hookHandlerCallSite] Error: NULL pMsgConn extracted via RBX register.\n");
-            return; // Cannot proceed without the connection context
+            return;
         }
         // Note: messageDataPtr *might* be null for zero-size messages. We proceed but handle it later.
 
-        // --- Read information from game structures using defined offsets ---
 
         // Read the pointer to the Handler Info structure from the MsgConn context
         handlerInfoPtr = *reinterpret_cast<void**>(
@@ -89,7 +83,7 @@ void hookHandlerCallSite(SafetyHookContext& ctx)
             // This is potentially expected if the dispatcher loop is between messages,
             // but should not happen immediately before a handler *call*. Log as warning.
             OutputDebugStringA("[hookHandlerCallSite] Warning: NULL handlerInfoPtr in MsgConn (Offset 0x48).\n");
-            return; // Cannot get ID or size
+            return;
         }
 
         // Read Message ID (Opcode) from the Handler Info structure
@@ -120,13 +114,12 @@ void hookHandlerCallSite(SafetyHookContext& ctx)
         // OutputDebugStringA(buffer);
 
 
-        // --- Delegate processing of the identified message ---
         // Pass the extracted information to the dedicated processing function.
         kx::PacketProcessing::ProcessDispatchedMessage(
             kx::PacketDirection::Received, // This hook handles received packets
             messageId,
-            static_cast<const uint8_t*>(messageDataPtr), // Pointer to the message payload
-            messageSize,                                 // Size of the payload
+            static_cast<const uint8_t*>(messageDataPtr),
+            messageSize,
             pMsgConn                                     // Pass context for potential future analysis
         );
 
@@ -140,7 +133,6 @@ void hookHandlerCallSite(SafetyHookContext& ctx)
         OutputDebugStringA("[hookHandlerCallSite] UNKNOWN EXCEPTION (Potential Access Violation reading state).\n");
     }
 
-    // No return value needed for the hook function itself.
     // SafetyHook ensures execution continues at the original instruction after this function returns.
 }
 
@@ -166,11 +158,10 @@ bool InitializeMessageHandlerHooks(uintptr_t dispatcherFuncAddress) {
 
     // Use SafetyHook's MidHook factory function
     auto builder = safetyhook::MidHook::create(
-        reinterpret_cast<void*>(hookSite1), // Address within the game function to hook
-        hookHandlerCallSite                // The C++ function to call when the hook is hit
+        reinterpret_cast<void*>(hookSite1),
+        hookHandlerCallSite
     );
 
-    // Check if the hook builder was created successfully
     if (!builder) {
         std::cerr << "[MessageHandlerHook] Failed to create SafetyHook MidHook builder (check address/permissions?)." << std::endl;
         return false;
@@ -180,7 +171,6 @@ bool InitializeMessageHandlerHooks(uintptr_t dispatcherFuncAddress) {
     // This activates the hook.
     g_handlerHook1 = std::move(*builder);
 
-    // Check if the move operation resulted in a valid hook object
     if (!g_handlerHook1) {
         std::cerr << "[MessageHandlerHook] Failed to finalize SafetyHook MidHook object after move." << std::endl;
         // Builder might have failed post-creation checks or during move construction.
@@ -202,7 +192,7 @@ bool InitializeMessageHandlerHooks(uintptr_t dispatcherFuncAddress) {
  */
 void CleanupMessageHandlerHooks() {
     // Destroy the hook object to uninstall the hook automatically via RAII.
-    if (g_handlerHook1) { // Check if it was successfully initialized
+    if (g_handlerHook1) {
         g_handlerHook1 = {}; // Assign empty object, triggers destructor of old object
         std::cout << "[MessageHandlerHook] Hook 1 cleaned up." << std::endl;
     }
