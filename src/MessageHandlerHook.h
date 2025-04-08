@@ -1,4 +1,3 @@
-// MessageHandlerHook.h
 #pragma once
 
 #include <cstdint>

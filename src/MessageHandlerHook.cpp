@@ -1,151 +1,163 @@
-#include <windows.h> // Ensure windows.h is included first for platform definitions
+#include <windows.h> // Included first for platform definitions
 #include "MessageHandlerHook.h"
-#include "../libs/safetyhook/safetyhook.hpp"    // SafetyHook library for mid-function hooking
-#include "PacketProcessor.h" // For ProcessDispatchedMessage
-#include "PacketData.h"      // For PacketDirection enum
-#include "GameStructs.h"     // For MSGCONN_*, HANDLER_INFO_*, MSG_DEF_* constants
+#include "../libs/safetyhook/safetyhook.hpp"
+#include "PacketProcessor.h"
+#include "PacketData.h"
+#include "GameStructs.h"
 #include "AppState.h"
 
-#include <iostream>          // For std::cerr (initialization errors)
-#include <iomanip>           // Potentially for hex formatting in debug logs
-#include <mutex>             // If needed for shared resources (currently only debug output)
-#include <vector>            // Used by PacketInfo (via PacketProcessor)
-#include <debugapi.h>        // For OutputDebugStringA (debugging)
-#include <cstdio>            // For sprintf_s (formatting debug messages)
-#include <exception>         // For std::exception
+#include <iostream>  // For std::cout, std::cerr (initialization logging)
+#include <iomanip>   // For std::hex
+#include <vector>    // Used by dependencies
+#include <debugapi.h> // For OutputDebugStringA (critical hook errors)
+#include <cstdio>    // For sprintf_s (critical hook errors)
+#include <exception> // For std::exception
 
-// Global SafetyHook object for the hook at the primary handler call site.
-// SafetyHookMid is used because we need register context access (ctx).
+// Global SafetyHook objects for managing the mid-function hooks.
 SafetyHookMid g_handlerHook1{};
+SafetyHookMid g_handlerHook2{};
+SafetyHookMid g_handlerHook3{};
+SafetyHookMid g_handlerHook4{};
 
-// TODO: Analyze if the other handler call sites within FUN_1412e9390
-//       (e.g., offsets 0x228, 0x385, 0x3E4 relative to function start)
-//       also need to be hooked. If so, declare additional SafetyHookMid objects
-//       (g_handlerHook2, etc.) and initialize them in InitializeMessageHandlerHooks.
-// SafetyHookMid g_handlerHook2{};
+// Stack offset relative to RBP to access the message data pointer (local_50).
+// NOTE: This offset is specific to the compiled function's stack frame and may break with game updates.
+constexpr ptrdiff_t STACK_OFFSET_MESSAGE_DATA_PTR = -0x18;
 
-// Optional: Mutex if extensive shared state was accessed directly in the hook.
-// Currently, processing is delegated, making this less critical here.
-// std::mutex g_hookMutex;
+// Offsets within FUN_1412e9390 targeting the start of the 'MOV RDX, [RBP+local_50]' instructions.
+// These pinpoint the locations for the mid-function hooks.
+constexpr ptrdiff_t DISPATCHER_HOOK_OFFSET_SITE_1 = 0x219; // Before CALL at 1412e95ad
+constexpr ptrdiff_t DISPATCHER_HOOK_OFFSET_SITE_2 = 0x228; // Before CALL at 1412e95bc
+constexpr ptrdiff_t DISPATCHER_HOOK_OFFSET_SITE_3 = 0x3D4; // Before CALL at 1412e9768
+constexpr ptrdiff_t DISPATCHER_HOOK_OFFSET_SITE_4 = 0x3E3; // Before CALL at 1412e9777
 
 /**
- * @brief Hook function executed via SafetyHook's MidHook just before the game calls
- *        a specific message handler function within the main dispatcher loop (FUN_1412e9390).
- * @details This function leverages the SafetyHook context (`ctx`) to read necessary registers (RBX, RBP)
- *          and memory locations relative to game structures (using offsets from GameStructs.h)
- *          to extract the message ID, message data pointer, and message size.
- *          It then delegates the processing and logging of this individual message to
- *          kx::PacketProcessing::ProcessDispatchedMessage.
- *          Execution automatically continues to the original hooked instruction after this function returns.
- * @param ctx SafetyHook context object providing access to the CPU register state
- *            at the time the hook was triggered (e.g., ctx.rbx, ctx.rbp).
+ * @brief Detour executed before a game message handler is called by the dispatcher.
+ * @details Extracts message details using register context and known struct offsets,
+ *          then delegates processing. Designed to work with MidHooks placed before
+ *          handler call preparations in FUN_1412e9390.
+ * @param ctx SafetyHook context providing access to register state (RBX, RBP).
 */
 void hookHandlerCallSite(SafetyHookContext& ctx)
 {
+    // Skip processing if capture is paused or the application is shutting down.
     if (kx::g_capturePaused || kx::g_isShuttingDown.load(std::memory_order_acquire)) {
-        return; // Skip processing and logging if paused or shutting down
+        return;
     }
 
-    // Optional: Uncomment for verbose hook entry debugging.
-    // OutputDebugStringA("[hookHandlerCallSite] MidHook Entered.\n");
-
-    void* pMsgConn = nullptr;
-    void* messageDataPtr = nullptr;
-    void* handlerInfoPtr = nullptr;
-    uint16_t messageId = 0;
-    uint32_t messageSize = 0;
-
     try {
-        // Extract MsgConn pointer from RBX register (as observed in dispatcher assembly)
-        pMsgConn = reinterpret_cast<void*>(ctx.rbx);
+        // pMsgConn is expected in RBX based on dispatcher function analysis.
+        void* pMsgConn = reinterpret_cast<void*>(ctx.rbx);
+        if (!pMsgConn) {
+            OutputDebugStringA("[hookHandlerCallSite] Error: pMsgConn (RBX) is NULL.\n");
+            return;
+        }
 
-        // Extract message data pointer (local_50) which is stored on the stack relative to RBP.
-        // WARNING: Stack offsets like [RBP - 0x18] can be less stable across compiler versions/updates
-        // than struct offsets. If this breaks, re-analyze the assembly immediately preceding the hook site
-        // to see if the data pointer (likely prepared for RDX for the call) is available in another register.
-        if (ctx.rbp != 0) { // Ensure RBP seems valid before dereferencing relative to it
-            messageDataPtr = *reinterpret_cast<void**>(ctx.rbp - 0x18); // Read local_50 from stack
+        // messageDataPtr is derived from a stack local relative to RBP.
+        // NOTE: Relies on stack offset [RBP-0x18], potentially less stable than struct offsets across game updates.
+        void* messageDataPtr = nullptr;
+        if (ctx.rbp != 0) {
+            messageDataPtr = *reinterpret_cast<void**>(ctx.rbp + STACK_OFFSET_MESSAGE_DATA_PTR);
         }
         else {
-            // This should not happen in standard function execution but is a safeguard.
-            OutputDebugStringA("[hookHandlerCallSite] Error: RBP register is NULL in context! Cannot get message data ptr.\n");
+            OutputDebugStringA("[hookHandlerCallSite] Error: RBP register is NULL. Cannot get message data ptr.\n");
             return;
         }
 
-        if (pMsgConn == nullptr) {
-            // This would indicate a serious issue if RBX wasn't holding the context.
-            OutputDebugStringA("[hookHandlerCallSite] Error: NULL pMsgConn extracted via RBX register.\n");
-            return;
-        }
-        // Note: messageDataPtr *might* be null for zero-size messages. We proceed but handle it later.
-
-
-        // Read the pointer to the Handler Info structure from the MsgConn context
-        handlerInfoPtr = *reinterpret_cast<void**>(
-            static_cast<char*>(pMsgConn) + kx::GameStructs::MSGCONN_HANDLER_INFO_PTR_OFFSET // Expected offset 0x48
+        // Obtain pointer to the current message handler's information structure via MsgConn offset.
+        void* handlerInfoPtr = *reinterpret_cast<void**>(
+            static_cast<char*>(pMsgConn) + kx::GameStructs::MSGCONN_HANDLER_INFO_PTR_OFFSET // Offset 0x48
             );
-        if (handlerInfoPtr == nullptr) {
-            // This is potentially expected if the dispatcher loop is between messages,
-            // but should not happen immediately before a handler *call*. Log as warning.
-            OutputDebugStringA("[hookHandlerCallSite] Warning: NULL handlerInfoPtr in MsgConn (Offset 0x48).\n");
+        if (!handlerInfoPtr) {
+            OutputDebugStringA("[hookHandlerCallSite] Warning: handlerInfoPtr (at MsgConn+0x48) is NULL.\n");
             return;
         }
 
-        // Read Message ID (Opcode) from the Handler Info structure
-        messageId = *reinterpret_cast<uint16_t*>(
-            static_cast<char*>(handlerInfoPtr) + kx::GameStructs::HANDLER_INFO_MSG_ID_OFFSET // Expected offset 0x00
+        // Read the message identifier (Opcode) from the handler info structure.
+        uint16_t messageId = *reinterpret_cast<uint16_t*>(
+            static_cast<char*>(handlerInfoPtr) + kx::GameStructs::HANDLER_INFO_MSG_ID_OFFSET // Offset 0x00
             );
 
-        // Read the pointer to the Message Definition structure from Handler Info
+        // Get pointer to the message definition structure to retrieve the message size.
         void* msgDefPtr = *reinterpret_cast<void**>(
-            static_cast<char*>(handlerInfoPtr) + kx::GameStructs::HANDLER_INFO_MSG_DEF_PTR_OFFSET // Expected offset 0x08
+            static_cast<char*>(handlerInfoPtr) + kx::GameStructs::HANDLER_INFO_MSG_DEF_PTR_OFFSET // Offset 0x08
             );
-        if (msgDefPtr == nullptr) {
-            // If there's no definition pointer, we cannot determine the size reliably.
-            OutputDebugStringA("[hookHandlerCallSite] Warning: NULL msgDefPtr in Handler Info. Assuming size 0.\n");
-            messageSize = 0; // Assume zero size for safety
-        }
-        else {
-            // Read Message Size from the Message Definition structure
+
+        uint32_t messageSize = 0;
+        if (msgDefPtr) {
             messageSize = *reinterpret_cast<uint32_t*>(
-                static_cast<char*>(msgDefPtr) + kx::GameStructs::MSG_DEF_SIZE_OFFSET // Expected offset 0x20
+                static_cast<char*>(msgDefPtr) + kx::GameStructs::MSG_DEF_SIZE_OFFSET // Offset 0x20
                 );
         }
+        else {
+            OutputDebugStringA("[hookHandlerCallSite] Warning: msgDefPtr is NULL. Assuming messageSize 0.\n");
+        }
 
-        // Optional: Debug log extracted data before processing
-        // char buffer[256];
-        // sprintf_s(buffer, sizeof(buffer), "[hookHandlerCallSite] MIDHOOK: MsgID=0x%04x, Size=%u, DataPtr=%p, MsgConn=%p\n",
-        //           messageId, messageSize, messageDataPtr, pMsgConn);
-        // OutputDebugStringA(buffer);
+        if (messageDataPtr == nullptr && messageSize > 0) {
+            char buffer[128];
+            sprintf_s(buffer, sizeof(buffer), "[hookHandlerCallSite] Error: messageDataPtr is NULL but messageSize is %u. Skipping.\n", messageSize);
+            OutputDebugStringA(buffer);
+            return;
+        }
 
-
-        // Pass the extracted information to the dedicated processing function.
         kx::PacketProcessing::ProcessDispatchedMessage(
-            kx::PacketDirection::Received, // This hook handles received packets
+            kx::PacketDirection::Received,
             messageId,
             static_cast<const uint8_t*>(messageDataPtr),
             messageSize,
-            pMsgConn                                     // Pass context for potential future analysis
+            pMsgConn
         );
-
     }
-    catch (const std::exception& e) { // Catch standard C++ exceptions (e.g., bad_alloc if logging fails)
+    catch (const std::exception& e) {
         char buffer[256];
-        sprintf_s(buffer, sizeof(buffer), "[hookHandlerCallSite] EXCEPTION: %s\n", e.what());
+        sprintf_s(buffer, sizeof(buffer), "[hookHandlerCallSite] Exception: %s\n", e.what());
         OutputDebugStringA(buffer);
     }
-    catch (...) { // Catch potential Windows SEH exceptions (e.g., memory access violations)
-        OutputDebugStringA("[hookHandlerCallSite] UNKNOWN EXCEPTION (Potential Access Violation reading state).\n");
+    catch (...) {
+        OutputDebugStringA("[hookHandlerCallSite] Unknown exception occurred (Potential Access Violation).\n");
     }
-
-    // SafetyHook ensures execution continues at the original instruction after this function returns.
 }
 
+/**
+ * @brief Installs a single SafetyHook MidHook at a specified site.
+ * @param hookObject Reference to the global SafetyHookMid object to manage the hook.
+ * @param siteAddress The absolute memory address to install the hook.
+ * @param offset The relative offset used (for logging purposes).
+ * @param siteNumber A number identifying the hook site (for logging).
+ * @param errorMsg Reference to a string where error details can be written.
+ * @return true if the hook was successfully installed, false otherwise.
+ */
+static bool InstallSingleMidHook(
+    SafetyHookMid& hookObject,
+    uintptr_t siteAddress,
+    ptrdiff_t offset,
+    int siteNumber,
+    std::string& errorMsg)
+{
+    std::cout << "[MessageHandlerHook] Attempting MidHook at site " << siteNumber
+        << " (Offset 0x" << std::hex << offset << "): 0x" << siteAddress << std::dec << std::endl;
+
+    auto builder = safetyhook::MidHook::create(reinterpret_cast<void*>(siteAddress), hookHandlerCallSite);
+    if (!builder) {
+        errorMsg = "Failed to create MidHook builder for site " + std::to_string(siteNumber);
+        return false;
+    }
+
+    hookObject = std::move(*builder);
+    if (!hookObject) {
+        // Builder might fail post-creation or during move construction
+        errorMsg = "Failed to finalize MidHook object for site " + std::to_string(siteNumber);
+        return false;
+    }
+
+    std::cout << "[MessageHandlerHook] Hook " << siteNumber << " installed." << std::endl;
+    return true;
+}
 
 /**
- * @brief Initializes the SafetyHook MidHook at the identified message handler call site(s).
+ * @brief Initializes SafetyHook MidHooks at the four identified message handler preparation sites.
+ * @details Orchestrates the installation using InstallSingleMidHook for each site.
  * @param dispatcherFuncAddress The runtime base address of the dispatcher function (FUN_1412e9390).
- * @return true on success, false on failure.
+ * @return true on success (all hooks installed), false on failure.
  */
 bool InitializeMessageHandlerHooks(uintptr_t dispatcherFuncAddress) {
     if (dispatcherFuncAddress == 0) {
@@ -153,53 +165,39 @@ bool InitializeMessageHandlerHooks(uintptr_t dispatcherFuncAddress) {
         return false;
     }
 
-    // Calculate the absolute address for the hook.
-    // This offset targets the `MOV RDX,[RBP-18]` instruction immediately preceding
-    // the first type of handler call (`CALL RAX` at 0x1412e95ad).
-    constexpr ptrdiff_t HOOK_OFFSET_1 = 0x219;
-    uintptr_t hookSite1 = dispatcherFuncAddress + HOOK_OFFSET_1;
+    // Calculate absolute addresses using the defined constants.
+    const uintptr_t hookSite1 = dispatcherFuncAddress + DISPATCHER_HOOK_OFFSET_SITE_1;
+    const uintptr_t hookSite2 = dispatcherFuncAddress + DISPATCHER_HOOK_OFFSET_SITE_2;
+    const uintptr_t hookSite3 = dispatcherFuncAddress + DISPATCHER_HOOK_OFFSET_SITE_3;
+    const uintptr_t hookSite4 = dispatcherFuncAddress + DISPATCHER_HOOK_OFFSET_SITE_4;
 
-    std::cout << "[MessageHandlerHook] Attempting to install MidHook at primary call site: 0x" << std::hex << hookSite1 << std::dec << std::endl;
+    std::string errorMsg; // Store the first error encountered
+    bool success = true;
 
-    // Use SafetyHook's MidHook factory function
-    auto builder = safetyhook::MidHook::create(
-        reinterpret_cast<void*>(hookSite1),
-        hookHandlerCallSite
-    );
+    // Install hooks sequentially, stopping on the first failure.
+    if (success) { success = InstallSingleMidHook(g_handlerHook1, hookSite1, DISPATCHER_HOOK_OFFSET_SITE_1, 1, errorMsg); }
+    if (success) { success = InstallSingleMidHook(g_handlerHook2, hookSite2, DISPATCHER_HOOK_OFFSET_SITE_2, 2, errorMsg); }
+    if (success) { success = InstallSingleMidHook(g_handlerHook3, hookSite3, DISPATCHER_HOOK_OFFSET_SITE_3, 3, errorMsg); }
+    if (success) { success = InstallSingleMidHook(g_handlerHook4, hookSite4, DISPATCHER_HOOK_OFFSET_SITE_4, 4, errorMsg); }
 
-    if (!builder) {
-        std::cerr << "[MessageHandlerHook] Failed to create SafetyHook MidHook builder (check address/permissions?)." << std::endl;
+    // Handle failure and cleanup
+    if (!success) {
+        std::cerr << "[MessageHandlerHook] Error: " << errorMsg << ". Cleaning up potentially installed hooks..." << std::endl;
+        CleanupMessageHandlerHooks(); // Attempt cleanup
         return false;
     }
 
-    // Move the created hook into the global variable for management
-    // This activates the hook.
-    g_handlerHook1 = std::move(*builder);
-
-    if (!g_handlerHook1) {
-        std::cerr << "[MessageHandlerHook] Failed to finalize SafetyHook MidHook object after move." << std::endl;
-        // Builder might have failed post-creation checks or during move construction.
-        return false;
-    }
-
-    // TODO: If analysis reveals messages are missed, investigate other call sites
-    // (e.g., dispatcherFuncAddress + 0x228) and install additional hooks (g_handlerHook2, etc.)
-    // using the same pattern: safetyhook::MidHook::create(...), std::move(...)
-
-    std::cout << "[MessageHandlerHook] MidHook installed successfully at primary site." << std::endl;
+    std::cout << "[MessageHandlerHook] All message handler MidHooks installed successfully." << std::endl;
     return true;
 }
 
 /**
  * @brief Cleans up and removes the installed SafetyHook MidHook(s).
- * @details Assigning an empty SafetyHookMid object triggers the destructor,
- *          which automatically uninstalls the hook.
  */
 void CleanupMessageHandlerHooks() {
-    // Destroy the hook object to uninstall the hook automatically via RAII.
-    if (g_handlerHook1) {
-        g_handlerHook1 = {}; // Assign empty object, triggers destructor of old object
-        std::cout << "[MessageHandlerHook] Hook 1 cleaned up." << std::endl;
-    }
-    // Add similar cleanup for g_handlerHook2 etc. if implemented
+    // Destroy hook objects via RAII by assigning empty objects. Check validity first.
+    if (g_handlerHook1) { g_handlerHook1 = {}; std::cout << "[MessageHandlerHook] Hook 1 cleaned up." << std::endl; }
+    if (g_handlerHook2) { g_handlerHook2 = {}; std::cout << "[MessageHandlerHook] Hook 2 cleaned up." << std::endl; }
+    if (g_handlerHook3) { g_handlerHook3 = {}; std::cout << "[MessageHandlerHook] Hook 3 cleaned up." << std::endl; }
+    if (g_handlerHook4) { g_handlerHook4 = {}; std::cout << "[MessageHandlerHook] Hook 4 cleaned up." << std::endl; }
 }
