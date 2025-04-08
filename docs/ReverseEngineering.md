@@ -39,11 +39,15 @@ Function addresses are relative to the `Gw2-64.exe` module base. Patterns are ID
 *   **Internal Name:** `FUN_1412e9390` (`Msg::DispatchStream`)
 *   **Pattern:** `48 89 5C 24 ? 4C 89 44 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8B EC 48 83 EC ? 8B 82`
 *   **Purpose:** Processes an already decrypted/decompressed buffer containing one or more framed messages. Iterates through messages, looks up handlers, and calls the appropriate handler function for each message.
-*   **Hook Point:** Mid-function, specifically targeting the instruction(s) immediately preceding the `call` to the specific message handler function pointer. Currently hooking offset `+0x219` (`MOV RDX, [RBP-0x18]`) relative to the function start using SafetyHook MidHook.
-    *   *Note:* Other potential call sites exist within this function (e.g., relative offsets `+0x228`, `+0x385`, `+0x3E4`) that may need hooking if the primary site misses certain messages.
+*   **Hook Points:** Mid-function, using SafetyHook MidHook, targeting the `MOV RDX, [RBP+STACK_OFFSET_MESSAGE_DATA_PTR]` instruction immediately preceding the handler calls at four distinct sites within the function:
+    *   Offset `+0x219` (Contiguous Buffer, Dispatch Type 1)
+    *   Offset `+0x228` (Contiguous Buffer, Dispatch Type 0)
+    *   Offset `+0x3D4` (Wrapping Buffer, Dispatch Type 1)
+    *   Offset `+0x3E3` (Wrapping Buffer, Dispatch Type 0)
+    *   This ensures messages are captured regardless of internal buffer state or dispatch type within this function.
 *   **Key Registers/Context at Hook Site:**
     *   `RBX`: Holds pointer to `MsgConn` context (`pMsgConn`).
-    *   `RBP`: Frame pointer. Message data pointer (`local_50`) is read from `[RBP - 0x18]`. (*Potential instability due to stack offset dependency*).
+    *   `RBP`: Frame pointer. Message data pointer (`local_50`) is read from `[RBP + STACK_OFFSET_MESSAGE_DATA_PTR]` (defined as -0x18 in `MessageHandlerHook.cpp`). (*Potential instability due to stack offset dependency*).
     *   `pMsgConn + 0x48`: Contains pointer to Handler Info Structure (`handlerInfoPtr`).
 *   **Relevant Helper Functions Called Internally:**
     *   `FUN_1412e81c0`: Handler lookup (Input: Registry Ptr, MsgID; Output: Handler Info Ptr).
@@ -110,9 +114,9 @@ Offsets determined through static analysis (IDA/Ghidra) and dynamic analysis (me
 ### Incoming (SMSG)
 
 *   **Method:** SafetyHook mid-function hook (`MidHook`) inside `FUN_1412e9390`.
-*   **Target:** Instruction `MOV RDX, [RBP-0x18]` at offset `+0x219` relative to function start (address immediately before the `call` to the message handler).
-*   **Data Extraction:** Uses `SafetyHookContext` (`ctx`) to read `RBX` (for `pMsgConn`) and `RBP` (for `messageDataPtr` stack offset). Reads `handlerInfoPtr` from `pMsgConn+0x48`. Dereferences pointers using struct offsets to get `messageId`, `msgDefPtr`, and `messageSize`.
-*   **Status:** Functional, captures individual plaintext messages. Relies on stack offset `[RBP-0x18]` which could be fragile. May need additional hooks at other call sites within the dispatcher.
+*   **Target:** Instructions `MOV RDX, [RBP+STACK_OFFSET_MESSAGE_DATA_PTR]` at offsets `+0x219`, `+0x228`, `+0x3D4`, and `+0x3E3` relative to function start (immediately before handler `call` instructions).
+*   **Data Extraction:** Uses `SafetyHookContext` (`ctx`) to read `RBX` (for `pMsgConn`) and `RBP` (for `messageDataPtr` stack offset). Reads `handlerInfoPtr` from `pMsgConn+0x48`. Dereferences pointers using struct offsets to get `messageId`, `msgDefPtr`, and `messageSize`. **This extraction logic works consistently across all four hook sites.**
+*   **Status:** Functional, captures individual plaintext messages from all identified call paths within this dispatcher. Relies on stack offset `STACK_OFFSET_MESSAGE_DATA_PTR` (`[RBP - 0x18]`) which could be fragile across game updates.
 
 ## Identified Packet Headers
 
@@ -128,8 +132,8 @@ See `PacketHeaders.h` for the current list of known `CMSG_HeaderId` and `SMSG_He
 2.  **Opcode Identification:** Systematically identify more CMSG and especially SMSG opcodes by correlating logged packets with in-game actions and adding them to `PacketHeaders.h`.
 3.  **Structure Analysis:** Begin reverse engineering the data payload (`PacketInfo.data`) for identified opcodes to create corresponding C++ structs.
 4.  **Hook Completeness/Stability:**
-    *   Verify if hooking only offset `+0x219` captures *all* message types or if other handler call sites in `FUN_1412e9390` also need hooking.
-    *   Monitor the stability of using the stack offset `[RBP - 0x18]` for the message data pointer. If it breaks, investigate alternative methods (e.g., reading `RDX` directly before the `call` if possible with SafetyHook or other techniques).
+    *   **Resolved (for FUN_1412e9390):** All four identified handler call preparation sites within the main dispatcher are now hooked, ensuring comprehensive capture of messages processed by this function. (Further investigation might be needed if *other* dispatch functions exist).
+    *   Monitor the stability of using the stack offset `STACK_OFFSET_MESSAGE_DATA_PTR` (`[RBP - 0x18]`) for the message data pointer. If it breaks, investigate alternative methods (e.g., reading `RDX` directly before the `call` if possible with SafetyHook or other techniques).
 5.  **Performance & Memory:** Implement packet log limiting. Evaluate if moving processing out of the hook callback into a separate thread is necessary.
 
 ## Toolchain
