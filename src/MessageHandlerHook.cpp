@@ -4,6 +4,7 @@
 #include "PacketProcessor.h" // For ProcessDispatchedMessage
 #include "PacketData.h"      // For PacketDirection enum
 #include "GameStructs.h"     // For MSGCONN_*, HANDLER_INFO_*, MSG_DEF_* constants
+#include "AppState.h"
 
 #include <iostream>          // For std::cerr (initialization errors)
 #include <iomanip>           // Potentially for hex formatting in debug logs
@@ -41,6 +42,10 @@ SafetyHookMid g_handlerHook1{};
 */
 void hookHandlerCallSite(SafetyHookContext& ctx)
 {
+    if (kx::g_capturePaused || kx::g_isShuttingDown.load(std::memory_order_acquire)) {
+        return; // Skip processing and logging if paused or shutting down
+    }
+
     // Optional: Uncomment for verbose hook entry debugging.
     // OutputDebugStringA("[hookHandlerCallSite] MidHook Entered.\n");
 

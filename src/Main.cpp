@@ -66,7 +66,7 @@ DWORD WINAPI MainThread(LPVOID lpParameter) {
     }
 
     // Signal hooks to stop processing before actual cleanup
-    kx::g_isShuttingDown = true;
+    kx::g_isShuttingDown.store(true, std::memory_order_release);
 
     // Give hooks a moment to recognize the flag before cleanup starts
 	// This helps prevent calls into ImGui after it's destroyed.

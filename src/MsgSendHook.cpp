@@ -17,7 +17,7 @@ void __fastcall hookMsgSend(void* param_1) {
 
     // Check if packet capture is active before processing.
     // This check happens *before* calling the original function.
-    if (!kx::g_capturePaused && !kx::g_isShuttingDown.load()) {
+    if (!kx::g_capturePaused && !kx::g_isShuttingDown.load(std::memory_order_acquire)) {
         if (param_1 != nullptr) {
             try {
                 // Cast the context pointer.
