@@ -13,7 +13,7 @@ The primary goal is to facilitate learning about the game's network protocol and
 ## Features
 
 *   **Real-time Bidirectional Packet Logging:** Captures and displays **sent (CMSG)** and **received (SMSG)** packet information (timestamp, direction, header ID, size, raw hex data).
-*   **Individual Message Capture (SMSG):** Hooks the game's internal message dispatcher to capture **individual, framed, plaintext** Server-to-Client messages *after* decryption and decompression have been handled by the game itself.
+*   **Individual Message Capture (SMSG):** Hooks the game's internal message dispatcher at multiple key locations to **comprehensively** capture **individual, framed, plaintext** Server-to-Client messages *after* decryption and decompression have been handled by the game itself.
 *   **Packet Identification:** Attempts to identify known CMSG and SMSG packet headers based on their 2-byte opcode. Handles unknown headers gracefully, displaying the raw ID.
 *   **ImGui Interface:** Provides a clean in-game overlay to view packets, filter them, and control capture.
 *   **Flexible Filtering:**
