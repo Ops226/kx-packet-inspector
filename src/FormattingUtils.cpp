@@ -65,7 +65,7 @@ namespace kx::Utils {
     std::string FormatDisplayLogEntryString(const PacketInfo& packet, int maxHexBytes) {
         std::string timestampStr = FormatTimestamp(packet.timestamp);
         const char* directionStr = (packet.direction == PacketDirection::Sent) ? "[S]" : "[R]";
-        const auto& dataToDisplay = packet.GetDisplayData(); // Use helper for potentially decrypted data
+        const auto& dataToDisplay = packet.data;
         int displaySize = dataToDisplay.size();
 
         // *** Use the maxHexBytes parameter for display ***
@@ -82,7 +82,7 @@ namespace kx::Utils {
     std::string FormatFullLogEntryString(const PacketInfo& packet) {
         std::string timestampStr = FormatTimestamp(packet.timestamp);
         const char* directionStr = (packet.direction == PacketDirection::Sent) ? "[S]" : "[R]";
-        const auto& dataToDisplay = packet.GetDisplayData();
+        const auto& dataToDisplay = packet.data;
         int displaySize = dataToDisplay.size();
 
         // *** Call FormatBytesToHex with -1 (or 0) for no limit ***

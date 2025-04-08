@@ -92,69 +92,92 @@ namespace kx::GameStructs {
 
 
 
-    // --- Constants related to Message Receiving (FUN_1412ea0c0) ---
+    // --- MsgConn Context Offsets (Receive/Dispatch Functions) ---
+    // These offsets are relative to the 'pMsgConn' pointer (param_2 / RDX) passed to
+    // the dispatcher FUN_1412e9390 and the original receiver FUN_1412ea0c0.
 
     /**
-     * @brief The memory offset from the base address of the MsgConn context object
-     *        (passed as param_2/RDX to FUN_1412ea0c0) to the buffer state variable.
-     * @details This state variable appears to control how the received buffer is processed
-     *          (e.g., plain, encrypted, compressed). Its value is checked within
-     *          FUN_1412ea0c0. Reading this value provides context but should be done
-     *          carefully as the context pointer (param_2) might be invalid in some cases.
-     *          Observed offset is the same as in MsgSendContext.
-     * @see hookMsgRecv in MsgRecvHook.cpp for usage context.
+     * @brief Offset to the last processed message ID (Opcode). uint32_t.
+     * @details Updated during the dispatch loop FUN_1412e9390. Read for context/debugging.
      */
-    inline constexpr std::ptrdiff_t MSGCONN_RECV_STATE_OFFSET = 0x108;
+    inline constexpr std::ptrdiff_t MSGCONN_LAST_MSG_ID_OFFSET = 0x40;
 
     /**
-     * @brief The bitmask applied to the 4th parameter (param_4/R9) of FUN_1412ea0c0
-     *        to extract the actual size of the received data buffer.
-     * @details The game passes the size potentially combined with other flags in a
-     *          64-bit register, but masks it down to 32 bits for size calculations.
+     * @brief Offset to the pointer holding the current/next message handler info structure. void**.
+     * @details This is populated by the handler lookup (FUN_1412e81c0) inside the
+     *          dispatcher loop (FUN_1412e9390) and cleared before the dispatcher returns.
+     *          Reading this pointer is key to getting message size and handler function.
      */
-    inline constexpr std::uint64_t MSGCONN_RECV_SIZE_MASK = 0xFFFFFFFF;
+    inline constexpr std::ptrdiff_t MSGCONN_HANDLER_INFO_PTR_OFFSET = 0x48;
 
     /**
-     * @brief The memory offset from the base address of the MsgConn context object
-     *        (passed as param_2/RDX to FUN_1412ea0c0) to the RC4 state structure.
-     * @details This structure contains the internal state (i, j, S-box) for the RC4
-     *          stream cipher used for decrypting incoming packets when the bufferState
-     *          at MSGCONN_RECV_STATE_OFFSET is 3.
-     * @see RC4State, hookMsgRecv
+     * @brief Offset to the base pointer of the internal ring buffer used for received data. byte**.
+     * @details Used in conjunction with read/write indices.
      */
-    inline constexpr std::ptrdiff_t MSGCONN_RECV_RC4_STATE_OFFSET = 0x12C; // 300 decimal
+    inline constexpr std::ptrdiff_t MSGCONN_BUFFER_BASE_PTR_OFFSET = 0x88;
 
     /**
-     * @brief Represents the RC4 stream cipher state used by the game.
-     * @details Based on analysis of the RC4 function FUN_1412ed810.
-     *          The layout assumes standard alignment.
-     * @warning Structure layout is inferred and might change in future game updates.
+     * @brief Offset to the current read index within the internal ring buffer. uint32_t.
+     * @details Indicates the position from where the next message data will be read.
+     *          Updated by the dispatcher loop.
      */
-    struct alignas(4) RC4State { // Ensure 4-byte alignment for i and j
-        /**
-         * @brief RC4 state variable 'i'. Accessed as *param_1 in FUN_1412ed810.
-         * @details Stored as uint32_t by the game, but only the low byte is used in calculations.
-         */
-        std::uint32_t i = 0; // Offset 0x00
+    inline constexpr std::ptrdiff_t MSGCONN_BUFFER_READ_IDX_OFFSET = 0x94;
 
-        /**
-         * @brief RC4 state variable 'j'. Accessed as param_1[1] in FUN_1412ed810.
-         * @details Stored as uint32_t by the game, but only the low byte is used in calculations.
-         */
-        std::uint32_t j = 0; // Offset 0x04
+    /**
+     * @brief Offset to the current write index within the internal ring buffer. uint32_t.
+     * @details Indicates the position where new data was last written (or end of current data).
+     */
+    inline constexpr std::ptrdiff_t MSGCONN_BUFFER_WRITE_IDX_OFFSET = 0xA0;
 
-        /**
-         * @brief The RC4 S-box (permutation of 0-255). Accessed via base param_1 + 8.
-         */
-        std::array<std::uint8_t, 256> S = {}; // Offset 0x08 (Size 0x100)
+    /**
+     * @brief Offset to the pointer to the base of the fully processed (decrypted, decompressed)
+     *        data buffer that the dispatcher (FUN_1412e9390) iterates over. void**.
+     * @details The function FUN_1412ed640 likely calculates message data pointers relative to this base.
+     */
+    inline constexpr std::ptrdiff_t MSGCONN_PROCESSED_BUFFER_BASE_OFFSET = 0xC8; // 200 decimal
 
-        // Total size is 4 + 4 + 256 = 264 bytes (0x108)
-    };
 
-    // Static assertions to verify expected offsets/size at compile time.
-    static_assert(offsetof(RC4State, i) == 0x00, "Offset mismatch for RC4State::i");
-    static_assert(offsetof(RC4State, j) == 0x04, "Offset mismatch for RC4State::j");
-    static_assert(offsetof(RC4State, S) == 0x08, "Offset mismatch for RC4State::S");
-    static_assert(sizeof(RC4State) == 0x108, "Size mismatch for RC4State");
+    // --- Message Handler Info Structure Offsets ---
+    // These offsets are relative to the 'handlerInfoPtr' obtained from
+    // MSGCONN_HANDLER_INFO_PTR_OFFSET within the MsgConn context.
+    // This structure appears to be 32 bytes (0x20) long based on FUN_1412e81c0.
 
+    /**
+     * @brief Offset within the Handler Info struct to the Message ID (Opcode). uint16_t or uint32_t.
+     * @details Identifies the type of the message this handler corresponds to.
+     *          Assuming uint16_t based on typical GW2 opcodes.
+     */
+    inline constexpr std::ptrdiff_t HANDLER_INFO_MSG_ID_OFFSET = 0x00;
+
+    /**
+     * @brief Offset within the Handler Info struct to the Message Definition Pointer. void**.
+     * @details Points to another structure containing details about the message, including its size.
+     */
+    inline constexpr std::ptrdiff_t HANDLER_INFO_MSG_DEF_PTR_OFFSET = 0x08;
+
+    /**
+     * @brief Offset within the Handler Info struct to the Dispatch Type field. int32_t.
+     * @details Used in a switch statement within the dispatcher (FUN_1412e9390)
+     *          to determine exactly how the handler function is called. (e.g., 0 or 1 observed).
+     */
+    inline constexpr std::ptrdiff_t HANDLER_INFO_DISPATCH_TYPE_OFFSET = 0x10;
+
+    /**
+     * @brief Offset within the Handler Info struct to the Handler Function Pointer. void**.
+     * @details Pointer to the actual C++ function that processes this specific message type.
+     *          This is the function executed by the `call` instruction in the dispatcher.
+     */
+    inline constexpr std::ptrdiff_t HANDLER_INFO_HANDLER_FUNC_PTR_OFFSET = 0x18;
+
+
+    // --- Message Definition Structure Offsets ---
+    // These offsets are relative to the 'msgDefPtr' obtained from
+    // HANDLER_INFO_MSG_DEF_PTR_OFFSET within the Handler Info structure.
+
+    /**
+     * @brief Offset within the Message Definition struct to the size of the message payload. uint32_t.
+     * @details Specifies how many bytes constitute the data payload for this message type,
+     *          excluding any potential header bytes read earlier by the dispatcher.
+     */
+    inline constexpr std::ptrdiff_t MSG_DEF_SIZE_OFFSET = 0x20;
 }

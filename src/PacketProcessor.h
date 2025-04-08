@@ -24,17 +24,22 @@ namespace kx::PacketProcessing {
     void ProcessOutgoingPacket(const GameStructs::MsgSendContext* context);
 
     /**
-     * @brief Processes data captured from an incoming packet event (MsgRecv).
-     * @param currentState The buffer state read from the MsgConn context (-1 if context was null, -2 on read error).
-     * @param buffer Pointer to the start of the raw received packet data buffer.
-     * @param size The size of the data in the buffer.
-     * @param capturedRc4State An optional containing the RC4 state snapshot if it was
-     *                         successfully captured (typically when currentState is 3).
-     *                         std::nullopt otherwise.
-     */
-    void ProcessIncomingPacket(int currentState,
-        const std::uint8_t* buffer,
-        std::size_t size,
-        const std::optional<GameStructs::RC4State>& capturedRc4State);
+    * @brief Processes an individual, decrypted, framed game message.
+    * @details This function is intended to be called by the MsgDispatch hook
+    *          for each message identified within the processed network stream.
+    *
+    * @param direction The direction of the message (should be Received).
+    * @param messageId The 2-byte header/opcode of the message.
+    * @param messageData Pointer to the start of the message's data payload (after the header).
+    * @param messageSize The size of the message's data payload.
+    * @param pMsgConn Optional: Pointer to the MsgConn context, if available/needed.
+    */
+    void ProcessDispatchedMessage(
+        kx::PacketDirection direction, // Should always be Received here
+        uint16_t messageId,
+        const uint8_t* messageData,
+        size_t messageSize,
+        void* pMsgConn = nullptr // Pass context if needed later
+    );
 
 } // namespace kx::PacketProcessing

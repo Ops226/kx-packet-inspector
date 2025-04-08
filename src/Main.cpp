@@ -67,8 +67,10 @@ DWORD WINAPI MainThread(LPVOID lpParameter) {
 
     // Signal hooks to stop processing before actual cleanup
     kx::g_isShuttingDown = true;
-    // Add a small delay to allow the render thread to potentially finish its current frame
-    Sleep(100); // Adjust delay if needed, or consider more robust synchronization
+
+    // Give hooks a moment to recognize the flag before cleanup starts
+	// This helps prevent calls into ImGui after it's destroyed.
+    Sleep(250);
 
     // Cleanup hooks and ImGui
     kx::CleanupHooks();

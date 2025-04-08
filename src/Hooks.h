@@ -3,7 +3,6 @@
 #include "HookManager.h"
 #include "D3DRenderHook.h"
 #include "MsgSendHook.h"
-#include "MsgRecvHook.h"
 
 namespace kx {
 
@@ -16,10 +15,10 @@ namespace kx {
         bool InitializeMsgSendHook();
 
         /**
-         * @brief Finds and initializes the MsgRecv hook.
+         * @brief Finds the message dispatcher and initializes the message handler hook(s).
          * @return True if successful or pattern not found (non-fatal), false on hooking error.
          */
-        bool InitializeMsgRecvHook();
+        bool InitializeMessageHandlerHook();
 
         /**
          * @brief Cleans up game-specific hooks (if needed beyond HookManager::Shutdown).
