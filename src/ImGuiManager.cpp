@@ -1,9 +1,9 @@
 #define NOMINMAX
 
 #include "ImGuiManager.h"
-#include "../ImGui/imgui.h"
-#include "../ImGui/imgui_impl_win32.h"
-#include "../ImGui/imgui_impl_dx11.h"
+#include "../libs/ImGui/imgui.h"
+#include "../libs/ImGui/imgui_impl_win32.h"
+#include "../libs/ImGui/imgui_impl_dx11.h"
 #include "PacketData.h" // Include for PacketInfo, g_packetLog, g_packetLogMutex
 #include "AppState.h"   // Include for UI state, filter state, hook status
 #include "GuiStyle.h"  // Include for custom styling functions

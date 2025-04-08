@@ -1,6 +1,6 @@
 #include <windows.h> // Ensure windows.h is included first for platform definitions
 #include "MessageHandlerHook.h"
-#include "safetyhook.hpp"    // SafetyHook library for mid-function hooking
+#include "../libs/safetyhook/safetyhook.hpp"    // SafetyHook library for mid-function hooking
 #include "PacketProcessor.h" // For ProcessDispatchedMessage
 #include "PacketData.h"      // For PacketDirection enum
 #include "GameStructs.h"     // For MSGCONN_*, HANDLER_INFO_*, MSG_DEF_* constants

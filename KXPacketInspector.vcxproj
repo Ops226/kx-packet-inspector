@@ -46,7 +46,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>$(SolutionDir)MinHook;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)libs\MinHook;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -62,7 +62,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp23</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)safetyhook;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)libs\safetyhook;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -78,7 +78,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp23</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)safetyhook;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)\libs\safetyhook;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -88,8 +88,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="safetyhook\safetyhook.cpp" />
-    <ClCompile Include="safetyhook\Zydis.c" />
+    <ClCompile Include="libs\safetyhook\safetyhook.cpp" />
+    <ClCompile Include="libs\safetyhook\Zydis.c" />
     <ClCompile Include="src\AppState.cpp" />
     <ClCompile Include="src\Console.cpp" />
     <ClCompile Include="src\D3DRenderHook.cpp" />
@@ -99,13 +99,13 @@
     <ClCompile Include="src\HookManager.cpp" />
     <ClCompile Include="src\Hooks.cpp" />
     <ClCompile Include="src\ImGuiManager.cpp" />
-    <ClCompile Include="ImGui\imgui.cpp" />
-    <ClCompile Include="ImGui\imgui_demo.cpp" />
-    <ClCompile Include="ImGui\imgui_draw.cpp" />
-    <ClCompile Include="ImGui\imgui_impl_dx11.cpp" />
-    <ClCompile Include="ImGui\imgui_impl_win32.cpp" />
-    <ClCompile Include="ImGui\imgui_tables.cpp" />
-    <ClCompile Include="ImGui\imgui_widgets.cpp" />
+    <ClCompile Include="libs\ImGui\imgui.cpp" />
+    <ClCompile Include="libs\ImGui\imgui_demo.cpp" />
+    <ClCompile Include="libs\ImGui\imgui_draw.cpp" />
+    <ClCompile Include="libs\ImGui\imgui_impl_dx11.cpp" />
+    <ClCompile Include="libs\ImGui\imgui_impl_win32.cpp" />
+    <ClCompile Include="libs\ImGui\imgui_tables.cpp" />
+    <ClCompile Include="libs\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\MessageHandlerHook.cpp" />
     <ClCompile Include="src\MsgSendHook.cpp" />
@@ -126,15 +126,15 @@
     <ClInclude Include="src\HookManager.h" />
     <ClInclude Include="src\Hooks.h" />
     <ClInclude Include="src\ImGuiManager.h" />
-    <ClInclude Include="ImGui\imconfig.h" />
-    <ClInclude Include="ImGui\imgui.h" />
-    <ClInclude Include="ImGui\imgui_impl_dx11.h" />
-    <ClInclude Include="ImGui\imgui_impl_win32.h" />
-    <ClInclude Include="ImGui\imgui_internal.h" />
-    <ClInclude Include="ImGui\imstb_rectpack.h" />
-    <ClInclude Include="ImGui\imstb_textedit.h" />
-    <ClInclude Include="ImGui\imstb_truetype.h" />
-    <ClInclude Include="MinHook\MinHook.h" />
+    <ClInclude Include="libs\ImGui\imconfig.h" />
+    <ClInclude Include="libs\ImGui\imgui.h" />
+    <ClInclude Include="libs\ImGui\imgui_impl_dx11.h" />
+    <ClInclude Include="libs\ImGui\imgui_impl_win32.h" />
+    <ClInclude Include="libs\ImGui\imgui_internal.h" />
+    <ClInclude Include="libs\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="libs\ImGui\imstb_textedit.h" />
+    <ClInclude Include="libs\ImGui\imstb_truetype.h" />
+    <ClInclude Include="libs\MinHook\MinHook.h" />
     <ClInclude Include="src\MessageHandlerHook.h" />
     <ClInclude Include="src\MsgSendHook.h" />
     <ClInclude Include="src\PacketData.h" />
