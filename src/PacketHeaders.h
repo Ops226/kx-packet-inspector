@@ -43,7 +43,41 @@ namespace kx {
 
     // --- Server->Client Header IDs ---
     enum class SMSG_HeaderId : uint16_t {
-        PING_REQUEST = 0x000C,
+        // --- Opcodes identified with higher confidence ---
+        CONNECTION_INFO = 0x0000, // Tentative: Core protocol/connection sync? (Opcode 0 often special)
+        UPDATE_BLOCK = 0x0001, // Frequent, variable size; likely bundles various updates (player/env/agent states)
+        PLAYER_STATE_UPDATE = 0x0002, // Periodic update related to player (idle anim, resources, pos confirm?)
+        ITEM_UPDATE = 0x0005, // Likely: Inventory, wallet, equipment sync post-load
+        CHARACTER_DATA = 0x0007, // Likely: Build, trait, equipment sync post-load
+        AGENT_UPDATE = 0x0008, // Frequent when NPCs/agents nearby; pos, state, stats updates
+        POST_LOAD_PLAYER_STATE = 0x0009, // Tentative: Player state set after map load (skills? movement?)
+        PING_REQUEST = 0x000C, // Server initiated ping
+        UI_MESSAGE = 0x0014, // Tentative: UI state, notifications, chat, mail headers?
+        PLAYER_DATA_UPDATE = 0x0015, // Likely: Currency, inventory changes, achievements
+        AGENT_STATE_BULK = 0x0016, // Likely: Bulk agent states/effects (similar to 0x001C?)
+        SKILL_UPDATE = 0x0017, // Likely: Skill bar, cooldowns, action results
+        CONFIG_UPDATE = 0x001A, // Tentative: Settings/configuration sync (map load?)
+        AGENT_EFFECT_UPDATE = 0x001C, // Likely related to effects, status, or interactions involving agents
+        MAP_DATA_BLOCK = 0x0020, // Likely: Loading map objects, entities, terrain data block
+        PET_INFO = 0x0021, // Tentative: Initial pet/minion state on map load?
+        MAP_DETAIL_INFO = 0x0023, // Likely: Detailed info for specific map points/elements (often paired packets)
+        MAP_LOAD_STATE = 0x0026, // Likely: Map loading sequence/status updates
+        AGENT_ATTRIBUTE_UPDATE = 0x0028, // Tentative: Agent stats, buffs/debuffs?
+        AGENT_APPEARANCE = 0x002B, // Likely: Agent visuals, equipment loading
+        AGENT_SYNC = 0x0034, // Likely: Periodic sync of multiple nearby agents' pos/state
+        AGENT_LINK = 0x0036, // Tentative: Linking agents (target, relationship?)
+        SOCIAL_UPDATE = 0x0039, // Tentative: Guild, party, friends list update?
+        TIME_SYNC = 0x003F, // Highly likely: Periodic server tick/time update
+
+        // --- Opcodes observed but purpose less certain (Keep noted/commented) ---
+        // MAP_SEQUENCE_STEP  = 0x0004, // Tentative: Simple ack/flag during map load (Size 2)
+        // AREA_INFO_UPDATE   = 0x000D, // Tentative: Infrequent, maybe area/group/proximity state?
+        // GENERIC_FLAG       = 0x001E, // Tentative: Simple flag/status update (Size 4)
+        // ACTIVITY_STATUS_UPDATE= 0x0027, // Likely: Zone instance / AFK status? (Size 2 or 6)
+        // PLAYER_VALUE_SET   = 0x003A, // Tentative: Setting a specific player value? (Size 11)
+
+        // --- Placeholders for future additions ---
+        // EXAMPLE_PACKET_NAME = 0xABCD,
     };
 
 
