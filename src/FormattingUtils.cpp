@@ -78,7 +78,7 @@ namespace kx::Utils {
         ss << timestampStr << " "         // Timestamp (HH:MM:SS.mmm)
             << directionStr << " "         // Direction ([S] or [R])
             << packet.name << " "          // Resolved Name
-            << "Op:0x" << std::hex << std::setw(4) << std::setfill('0') << packet.rawHeaderId << std::dec // Opcode (Op:0xABCD)
+            << "Op:0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << packet.rawHeaderId << std::dec // Opcode (Op:0xABCD)
             << " | Sz:" << displaySize     // Size (Sz:N)
             << " | " << dataHexStr;        // Hex Data (potentially truncated)
 
@@ -96,7 +96,7 @@ namespace kx::Utils {
         ss << timestampStr << " "         // Timestamp (HH:MM:SS.mmm)
             << directionStr << " "         // Direction ([S] or [R])
             << packet.name << " "          // Resolved Name
-            << "Op:0x" << std::hex << std::setw(4) << std::setfill('0') << packet.rawHeaderId << std::dec // Opcode (Op:0xABCD)
+            << "Op:0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << packet.rawHeaderId << std::dec // Opcode (Op:0xABCD)
             << " | Sz:" << displaySize     // Size (Sz:N)
             << " | " << dataHexStr;        // Hex Data (full)
 
