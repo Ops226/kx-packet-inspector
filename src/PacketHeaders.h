@@ -110,10 +110,8 @@ namespace kx {
         if (name_sv) {
             return prefix + std::string(*name_sv);
         } else {
-            // Format unknown header directly
-            std::stringstream ss;
-            ss << prefix << "UNKNOWN [0x" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(rawHeaderId) << "]";
-            return ss.str();
+            // Return generic unknown name; opcode will be added by formatting function
+            return prefix + "UNKNOWN";
         }
     }
 
