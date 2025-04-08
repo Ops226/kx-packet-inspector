@@ -2,7 +2,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h> // Include windows.h early to establish platform definitions
 
-// Now include your project headers and standard library headers
 #include "PacketProcessor.h"
 #include "PacketData.h"
 #include "AppState.h"
