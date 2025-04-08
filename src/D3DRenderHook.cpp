@@ -74,6 +74,7 @@ namespace kx::Hooking {
 
         m_isInit = false;
         m_hWindow = NULL;
+        m_pOriginalPresent = nullptr;
         kx::g_presentHookStatus = kx::HookStatus::Unknown; // Reset status
     }
 
@@ -141,8 +142,9 @@ namespace kx::Hooking {
 
 
     HRESULT __stdcall D3DRenderHook::DetourPresent(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags) {
-        if (g_isShuttingDown) { // Use AppState flag
-            // Ensure original is valid before calling
+		// Check the shutdown flag FIRST. If set, immediately call original and exit.
+		// This prevents accessing potentially destroyed resources (ImGui context, etc.)
+        if (kx::g_isShuttingDown.load(std::memory_order_acquire)) { // Use acquire load
             return m_pOriginalPresent ? m_pOriginalPresent(pSwapChain, SyncInterval, Flags) : E_FAIL;
         }
 
@@ -204,20 +206,38 @@ namespace kx::Hooking {
             }
         }
 
-        // Hotkey check (INSERT) - Consider moving to a dedicated InputHandler
-        static bool lastToggleKeyState = false;
-        bool currentToggleKeyState = (GetAsyncKeyState(VK_INSERT) & 0x8000) != 0;
-        if (currentToggleKeyState && !lastToggleKeyState) {
-            g_showInspectorWindow = !g_showInspectorWindow; // Use AppState flag
-        }
-        lastToggleKeyState = currentToggleKeyState;
+        // --- Hotkey / Frame Logic ---
+		// Hotkey check should ideally also check m_isInit?
+        if (m_isInit) { // Only process hotkeys/UI if fully initialized
+            static bool lastToggleKeyState = false;
+            bool currentToggleKeyState = (GetAsyncKeyState(VK_INSERT) & 0x8000) != 0;
+            if (currentToggleKeyState && !lastToggleKeyState) {
+                kx::g_showInspectorWindow = !kx::g_showInspectorWindow;
+            }
+            lastToggleKeyState = currentToggleKeyState;
 
-        // Render ImGui overlay if initialized and visible
-        if (m_isInit && g_showInspectorWindow) { // Use AppState flag
-            ImGuiManager::NewFrame();
-            ImGuiManager::RenderUI(); // Renders the specific UI windows
-            ImGuiManager::Render(m_pContext, m_pMainRenderTargetView); // Renders ImGui draw data
+            // --- Render ImGui overlay ---
+            // Add ANOTHER check for shutdown flag right before ImGui calls
+            // AND ensure ImGui context still exists (check GImGui != nullptr)
+            if (kx::g_showInspectorWindow && !kx::g_isShuttingDown.load(std::memory_order_acquire) && ImGui::GetCurrentContext() != nullptr)
+            {
+                try { // Optional: Add try-catch around ImGui calls during shutdown race possibility
+                    ImGuiManager::NewFrame();
+                    ImGuiManager::RenderUI(); // Contains ImGui::Begin/End
+                    ImGuiManager::Render(m_pContext, m_pMainRenderTargetView);
+                }
+                catch (const std::exception& e) {
+                    OutputDebugStringA("[DetourPresent] ImGui Exception during Render: ");
+                    OutputDebugStringA(e.what());
+                    OutputDebugStringA("\n");
+                }
+                catch (...) {
+                    OutputDebugStringA("[DetourPresent] Unknown ImGui Exception during Render.\n");
+                }
+            }
+            // --- End Render ImGui ---
         }
+        // --- End Hotkey / Frame Logic ---
 
         // Call original Present function - ensure it's valid
         return m_pOriginalPresent ? m_pOriginalPresent(pSwapChain, SyncInterval, Flags) : E_FAIL;
