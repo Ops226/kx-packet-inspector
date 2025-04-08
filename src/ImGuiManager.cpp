@@ -147,6 +147,18 @@ void ImGuiManager::RenderStatusControlsSection() {
 
 void ImGuiManager::RenderFilteringSection() {
     if (ImGui::CollapsingHeader("Filtering")) {
+		// Reset Filters Button
+		if (ImGui::Button("Reset Filters")) {
+		    kx::g_packetFilterMode = kx::FilterMode::ShowAll;
+		    kx::g_packetDirectionFilterMode = kx::DirectionFilterMode::ShowAll;
+		    for (auto& pair : kx::g_packetHeaderFilterSelection) {
+		        pair.second = false; // Uncheck all header filters
+		    }
+		    for (auto& pair : kx::g_specialPacketFilterSelection) {
+		        pair.second = false; // Uncheck all special filters
+		    }
+		}
+		ImGui::Separator(); // Add separator after the button
 
         // --- Global Direction Filter ---
         ImGui::Text("Show Direction:"); ImGui::SameLine();
