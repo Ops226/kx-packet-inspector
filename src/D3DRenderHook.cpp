@@ -243,7 +243,11 @@ namespace kx::Hooking {
         return m_pOriginalPresent ? m_pOriginalPresent(pSwapChain, SyncInterval, Flags) : E_FAIL;
     }
 
-
+    // TODO: [Input Conflict] This standard WndProc hook (via SetWindowLongPtr) breaks GW2's
+	// camera rotation (LMB/RMB hold) when the overlay is visible. Calling ImGui_ImplWin32_WndProcHandler
+	// during the game's mouselook mode causes interference.
+	// A fix likely requires detour hooking the game's native WndProc directly to implement
+	// more conditional ImGui handler logic or bypass it during mouselook.
     LRESULT __stdcall D3DRenderHook::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
         // If ImGui is initialized and visible, let it process the message first.
