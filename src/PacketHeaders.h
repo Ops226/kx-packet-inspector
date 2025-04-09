@@ -37,8 +37,10 @@ namespace kx {
         USE_SKILL = 0x0017,
         MOUNT_MOVEMENT = 0x0018,
         DESELECT_AGENT = 0x00DD,
-        SELECT_AGENT = 0x00E5
+        SELECT_AGENT = 0x00E5,
         // Note: Values above 256 (0x0100) won't work with magic_enum
+        INTERACT_WITH_AGENT = 0x010E, // Likely: Player initiates interaction with an agent
+        INTERACTION_RESPONSE = 0x010F, // Likely: Player selects dialogue option / continues interaction
     };
 
     // --- Server->Client Header IDs ---
@@ -51,7 +53,7 @@ namespace kx {
         CHARACTER_DATA = 0x0007, // Likely: Build, trait, equipment sync post-load
         AGENT_UPDATE = 0x0008, // Frequent when NPCs/agents nearby; pos, state, stats updates
         POST_LOAD_PLAYER_STATE = 0x0009, // Tentative: Player state set after map load (skills? movement?)
-        PING_REQUEST = 0x000C, // Server initiated ping
+        INTERACTION_DIALOGUE = 0x000F, // Highly likely: Multi-part message sequence for NPC dialogue/interaction data
         UI_MESSAGE = 0x0014, // Tentative: UI state, notifications, chat, mail headers?
         PLAYER_DATA_UPDATE = 0x0015, // Likely: Currency, inventory changes, achievements
         AGENT_STATE_BULK = 0x0016, // Likely: Bulk agent states/effects (similar to 0x001C?)
