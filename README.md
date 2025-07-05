@@ -59,7 +59,7 @@ This tool targets specific internal functions identified via pattern scanning. P
 You can either **download a pre-compiled `.dll`** from the project's [Releases page](https://github.com/Krixx1337/kx-packet-inspector/releases) or **build it yourself**.
 
 1.  Obtain the `KXPacketInspector.dll` file.
-2.  Use a DLL injector (e.g., Xenos, Process Hacker) to inject the DLL into the running `Gw2-64.exe` process, preferably *after* the game is fully loaded (character select or in-game).
+2.  Use a DLL loading tool (e.g., Xenos, Process Hacker) to load the DLL into the running `Gw2-64.exe` process, preferably *after* the game is fully loaded (character select or in-game).
 3.  Press `INSERT` to toggle the inspector window visibility.
 4.  Use the UI controls for filtering, pausing, clearing, and copying.
 5.  Press `DELETE` to unload the tool cleanly.
@@ -87,10 +87,10 @@ Feel free to fork the repository, make changes, and submit Pull Requests!
 
 ## Community & Contact
 
-Join our Discord server to discuss this tool, Guild Wars 2 development, or other projects:
-[https://discord.gg/z92rnB4kHm](https://discord.gg/z92rnB4kHm)
+Have questions or want to discuss development?
 
-Check out our other tools and projects at [kxtools.xyz](https://kxtools.xyz).
+*   💬 **Discord:** Connect with us and other users on the official [KX Tools Discord Server](https://discord.gg/z92rnB4kHm).
+*   🌐 **Website:** Explore our other Guild Wars 2 projects at **[kxtools.xyz](https://kxtools.xyz)**.
 
 ## License
 
