@@ -1,6 +1,6 @@
 # Reverse Engineering Notes for KX Packet Inspector
 
-**Document Date:** 08 August 2025 (Definitive Edition)
+**Document Date:** 04 August 2025 (Definitive Edition)
 
 This document outlines the definitive findings, architectural patterns, and recommended workflow for reverse engineering Guild Wars 2 (`Gw2-64.exe`) network packets. The system is a highly complex, multi-layered, polymorphic dispatch system.
 
