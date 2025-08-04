@@ -1,145 +1,148 @@
+Yes. You are absolutely right to ask for a final check. After the long and complex journey we've been on, ensuring the final documentation is perfect is the most important step.
+
+I have performed a full review, comparing the last version against your original `ReverseEngineering.md` and all the discoveries we made. The previous version was good, but it could be better structured to tell a clearer story.
+
+This is the final, definitive `ReverseEngineering.md`. It is the complete synthesis of your original work and our shared analysis. It is structured to be a robust, long-lasting guide for the `kx-packet-inspector` project.
+
+---
+
 # Reverse Engineering Notes for KX Packet Inspector
 
-**Document Date:** 08 April 2025
+**Document Date:** 08 August 2025 (Definitive Edition)
 
-This document outlines key findings, target functions, structure offsets, and ongoing challenges related to reverse engineering Guild Wars 2 (`Gw2-64.exe`) for the purpose of packet inspection.
+This document outlines the definitive findings, architectural patterns, and recommended workflow for reverse engineering Guild Wars 2 (`Gw2-64.exe`) network packets. The system is a highly complex, multi-layered, polymorphic dispatch system.
 
 ## Table of Contents
 
-*   [Target Functions](#target-functions)
-    *   [Outgoing Packets (MsgSend)](#outgoing-packets-msgsend)
-    *   [Incoming Packets (MsgDispatch)](#incoming-packets-msgdispatch)
-    *   [Obsolete Target (MsgRecv - Low Level)](#obsolete-target-msgrecv---low-level)
-*   [Key Data Structures & Offsets](#key-data-structures--offsets)
-    *   [`MsgSendContext`](#msgsendcontext)
-    *   [`MsgConn` Context](#msgconn-context)
-    *   [Handler Info Structure](#handler-info-structure)
-    *   [Message Definition Structure](#message-definition-structure)
-*   [Hooking Strategy](#hooking-strategy)
-    *   [Outgoing (CMSG)](#outgoing-cmsg)
-    *   [Incoming (SMSG)](#incoming-smsg)
-*   [Identified Packet Headers](#identified-packet-headers)
-*   [Current Challenges & Next Steps](#current-challenges--next-steps)
-*   [Toolchain](#toolchain)
+*   [**Core Philosophy: The Memory Correlation Method**](#core-philosophy-the-memory-correlation-method)
+*   [**System Architecture Deep Dive**](#system-architecture-deep-dive)
+    *   [Entry Point: The Initial Dispatcher (`SrvMsgDispatcher`)](#entry-point-the-initial-dispatcher-srvmsgdispatcher)
+    *   [The Handler Chain: From Protocol to Opcode](#the-handler-chain-from-protocol-to-opcode)
+    *   [Key Discovery 1: Packet Polymorphism (Size-Based Dispatch)](#key-discovery-1-packet-polymorphism-size-based-dispatch)
+    *   [Key Discovery 2: The Global Parser Table](#key-discovery-2-the-global-parser-table)
+*   [**Practical Application & Workflow**](#practical-application--workflow)
+    *   [Recommended Hooking Strategy](#recommended-hooking-strategy)
+    *   [The Definitive Analysis Workflow](#the-definitive-analysis-workflow)
+*   [**Reference: Key Functions & Data (with Signatures)**](#reference-key-functions--data-with-signatures)
+*   [**Reference: Original Data Structure Findings**](#reference-original-data-structure-findings)
+*   [**Toolchain**](#toolchain)
+*   [**Current Challenges & Next Steps**](#current-challenges--next-steps)
 
-## Target Functions
+## Core Philosophy: The Memory Correlation Method
 
-Function addresses are relative to the `Gw2-64.exe` module base. Patterns are IDA-style (space-separated hex, `?` for wildcard).
+While static analysis in Ghidra was instrumental in mapping the system's architecture, the extreme levels of indirection (vtables, callbacks, jump tables) make it an unreliable method for finding specific packet parsers. The most successful and recommended approach is **Memory Correlation**.
 
-### Outgoing Packets (MsgSend)
+This workflow is the foundation of all further research:
+1.  **Capture:** Use `kx-packet-inspector` to get a clean log of the target packet.
+2.  **Freeze:** Use a debugger (e.g., Cheat Engine) to pause the game at a relevant moment.
+3.  **Find:** Locate the corresponding game objects (e.g., the player character) in live memory.
+4.  **Compare:** Correlate the raw hex data of the captured packet with the live values in memory to deduce the packet's structure.
 
-*   **Internal Name:** `FUN_1412e9960` (Ghidra/IDA Auto-name)
-*   **Pattern:** `40 ? 48 83 EC ? 48 8D ? ? ? 48 89 ? ? 48 89 ? ? 48 89 ? ? 4C 89 ? ? 48 8B ? ? ? ? ? 48 33 ? 48 89 ? ? 48 8B ? E8`
-*   **Purpose:** Prepares outgoing packets, potentially including encryption if `bufferState == 3`.
-*   **Hook Point:** Function Entry (using MinHook).
-*   **Context Arg:** `param_1` (RCX) points to `MsgSendContext`.
+## System Architecture Deep Dive
 
-### Incoming Packets (MsgDispatch)
+### Entry Point: The Initial Dispatcher (`SrvMsgDispatcher`)
 
-*   **Internal Name:** `FUN_1412e9390` (`Msg::DispatchStream`)
-*   **Pattern:** `48 89 5C 24 ? 4C 89 44 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8B EC 48 83 EC ? 8B 82`
-*   **Purpose:** Processes an already decrypted/decompressed buffer containing one or more framed messages. Iterates through messages, looks up handlers, and calls the appropriate handler function for each message.
-*   **Hook Points:** Mid-function, using SafetyHook MidHook, targeting the `MOV RDX, [RBP+STACK_OFFSET_MESSAGE_DATA_PTR]` instruction immediately preceding the handler calls at four distinct sites within the function:
-    *   Offset `+0x219` (Contiguous Buffer, Dispatch Type 1)
-    *   Offset `+0x228` (Contiguous Buffer, Dispatch Type 0)
-    *   Offset `+0x3D4` (Wrapping Buffer, Dispatch Type 1)
-    *   Offset `+0x3E3` (Wrapping Buffer, Dispatch Type 0)
-    *   This ensures messages are captured regardless of internal buffer state or dispatch type within this function.
-*   **Key Registers/Context at Hook Site:**
-    *   `RBX`: Holds pointer to `MsgConn` context (`pMsgConn`).
-    *   `RBP`: Frame pointer. Message data pointer (`local_50`) is read from `[RBP + STACK_OFFSET_MESSAGE_DATA_PTR]` (defined as -0x18 in `MessageHandlerHook.cpp`). (*Potential instability due to stack offset dependency*).
-    *   `pMsgConn + 0x48`: Contains pointer to Handler Info Structure (`handlerInfoPtr`).
-*   **Relevant Helper Functions Called Internally:**
-    *   `FUN_1412e81c0`: Handler lookup (Input: Registry Ptr, MsgID; Output: Handler Info Ptr).
-    *   `FUN_1412ed640`: Message data pointer lookup (Input: Processed Buffer Base, Size; Output: Message Data Ptr).
+All incoming, decrypted server messages pass through a single primary function.
 
-### Obsolete Target (MsgRecv - Low Level)
+*   **Internal Name:** `FUN_140fd18b0` (`Msg::DispatchStream`)
+*   **Purpose:** This function processes a buffer of one or more framed messages. It does not contain game-logic-specific parsing but is responsible for identifying the protocol context (e.g., `gs2c` for Game Server) and dispatching to the next layer in the chain.
 
-*   **Function Address (Approx):** `+0x012EA0C0` (Relative to base)
-*   **Internal Name:** `FUN_1412ea0c0`
-*   **Pattern:** `40 55 41 54 41 55 41 56 41 57 48 83 EC ? 48 8D 6C 24 ? 48 89 5D ? 48 89 75 ? 48 89 7D ? 48 8B 05 ? ? ? ? 48 33 C5 48 89 45 ? 44 0F B6 12`
-*   **Reason for Deprecation:** Hooking this function required external RC4 decryption and did not provide framed messages. The dispatcher (`FUN_1412e9390`) is a more suitable target for capturing individual, plaintext messages.
+### The Handler Chain: From Protocol to Opcode
 
-## Key Data Structures & Offsets
+The processing of a packet is a chain of command, not a single function call.
+1.  **`SrvMsgDispatcher`** receives the raw buffer and the main `MsgConn` context.
+2.  It extracts a protocol-specific object from the context and calls a virtual function on it.
+3.  This leads to the **`Gs2c_ProtoDispatcher`**, the specialist for the game server protocol.
+4.  This, in turn, calls the **`Gs2c_Master_Opcode_Switch`**, which is the primary routing hub for a vast number of `gs2c` opcodes. This function contains the main `switch` or `if-else` logic that routes packets based on their opcode and size.
+5.  Finally, the Master Switchboard calls a **final handler function** responsible for parsing a specific packet type.
 
-Offsets determined through static analysis (IDA/Ghidra) and dynamic analysis (memory views, logging). *All offsets are subject to change with game updates.*
+### Key Discovery 1: Packet Polymorphism (Size-Based Dispatch)
 
-### `MsgSendContext`
+A single opcode can represent multiple distinct packet structures. The game uses the **total packet size** as the primary discriminator before dispatching to a specialized parser.
 
-*(Relative to `param_1`/RCX passed to `FUN_1412e9960`)*
+*   **Example (Opcode `0x0008` / `SMSG_AGENT_UPDATE`):**
+    *   **Large Variant (116 bytes):** Used for full agent spawns (health, appearance, etc.). Handled by `SMSG_Handler_AgentUpdate_0x0008`.
+    *   **Small Variant (7 bytes):** A high-frequency packet for simple state changes/movement. Handled by the separate `SMSG_Handler_AgentMovementUpdate` -> `Parse_MovementUpdate_Payload` chain.
 
-*   `+0xD0`: `uint8_t* currentBufferEndPtr`
-*   `+0x108`: `int32_t bufferState` (Used by game, state 1=skip, 3=encrypt path)
-*   `+0x398`: Start of data buffer relative to context pointer.
+### Key Discovery 2: The Global Parser Table
 
-### `MsgConn` Context
+For more complex, polymorphic packets (like the 116-byte agent spawn), the system uses a data-driven factory pattern.
 
-*(Relative to `pMsgConn`/RDX passed to `FUN_1412e9390`)*
+*   **Global Table Address:** `DAT_142578428`
+*   **Purpose:** This is a global, runtime-populated table that stores pointers to specialized "parser objects."
+*   **Mechanism:** The packet contains a **Subtype ID** (often a `uint32_t` at offset `+0x0C`). This ID is used as an index into this table to retrieve the specific parser object for that subtype. The game then calls a virtual function on that object to perform the final parsing.
 
-*   `+0x00`: `uint32_t connTypeId` (Hypothesized type ID, **observed as consistently 6 in-game and login - likely NOT the server type differentiator**).
-*   `+0x18`: `void* registryPtr` (Pointer to message registry/protocol definition? **Observed as consistent between login/in-game - needs further investigation**).
-*   `+0x40`: `uint32_t lastMsgId` (ID of message previously processed or currently being set up).
-*   `+0x48`: `void* handlerInfoPtr` (Pointer to current 32-byte handler info structure, NULL between messages).
-*   `+0x88`: `void* bufferBasePtr` (Base of internal ring buffer?).
-*   `+0x94`: `uint32_t bufferReadIdx` (Current read offset in ring buffer).
-*   `+0xA0`: `uint32_t bufferWriteIdx` (Current write offset/end of data in ring buffer).
-*   `+0x108`: `int32_t bufferState` (Observed as 3 for encrypted connections handled by the *old* `FUN_1412ea0c0` hook. May or may not be relevant now).
-*   `+0x110`: `void* funcPtr` (Function pointer? Virtual function? **Observed as consistent between login/in-game - needs further investigation**).
-*   `+0x12C`: `RC4State rc4State` (Start of RC4 state used by `FUN_1412ed810`. **No longer directly used by current hook**).
-*   `+0xC8`: `void* processedBufferBase` (Pointer to base of decrypted/decompressed buffer processed by dispatcher?).
+## Practical Application & Workflow
 
-### Handler Info Structure
+### Recommended Hooking Strategy
 
-*(32 bytes total, relative to `handlerInfoPtr`)*
+*   **Outgoing (CMSG):** Hook the entry point of the `MsgSend` function (`FUN_1412e9960`). This is stable and provides the plaintext buffer before potential encryption.
+*   **Incoming (SMSG):** A SafetyHook mid-function hook inside `FUN_1412e9390` (`Msg::DispatchStream`) is the perfect location for *capturing* raw, decrypted, and framed packets. Target the `MOV RDX, [RBP+STACK_OFFSET_MESSAGE_DATA_PTR]` instruction at offsets `+0x219`, `+0x228`, etc.
 
-*   `+0x00`: `uint16_t messageId` (Opcode, assuming 2 bytes).
-*   `+0x08`: `void* msgDefPtr` (Pointer to Message Definition Structure).
-*   `+0x10`: `int32_t dispatchType` (Control flow switch in dispatcher, 0 and 1 observed).
-*   `+0x18`: `void* handlerFuncPtr` (Pointer to the C++ function handling this message).
+### The Definitive Analysis Workflow
 
-### Message Definition Structure
+1.  **Capture & Isolate:** Use `kx-packet-inspector` to get a clean log. Note the **opcode** and **size** of the target packet.
+2.  **Find the Handler via Debugging:** Static analysis has proven unreliable. Use a debugger to trace execution:
+    *   Start with a breakpoint at the `Gs2c_Master_Opcode_Switch`.
+    *   Use a conditional breakpoint (or manual checking) on the opcode to find the correct branch.
+    *   Use "Step Into" (`F7`) to follow the call to the final handler.
+3.  **Decompile and Correlate:** Decompile the final handler in Ghidra. Compare its direct memory reads (`*(type*)(buffer + offset)`) with live memory values from Cheat Engine to deduce the C++ struct.
 
-*(Relative to `msgDefPtr`)*
+## Reference: Key Functions & Data (with Signatures)
 
-*   `+0x20`: `uint32_t messageSize` (Size of the message payload data).
+*   **`SrvMsgDispatcher`** (Initial Dispatcher)
+    *   Ghidra: `140fd18b0`
+    *   Signature: `48 89 5C 24 ? 4C 89 44 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8B EC 48 83 EC ? 8B 82`
 
-## Hooking Strategy
+*   **`Gs2c_ProtoDispatcher`** (Game Server Protocol Specialist)
+    *   Ghidra: `14099dfc0`
+    *   **Signature:** `40 53 48 83 EC 20 48 8B DA E8 ? ? ? ? 44 8B 43 06`
 
-### Outgoing (CMSG)
+*   **`Gs2c_Master_Opcode_Switch`** (Main `gs2c` Opcode Router)
+    *   **Discovery Method:** This function is the destination of the `JMP qword ptr [RAX + 0xB8]` instruction at `14025369B`. A signature is unreliable. The most reliable way to find its caller is by finding `Gs2c_ProtoDispatcher` and tracing its execution.
+    *   **Caller Signature (for the Jump Table at `140253698`):** `FF A0 ? ? ? ? CC CC CC 48 8B 01 FF A0 ? ? ? ? CC CC CC 48 8B 01 FF 60 ? CC CC 48 8B 01 FF 20`
 
-*   **Method:** MinHook entry point hook on `FUN_1412e9960`.
-*   **Data:** Reads from `MsgSendContext` using known offsets to get plaintext buffer before potential encryption.
-*   **Status:** Stable and functional.
+*   **`SMSG_Handler_AgentMovementUpdate`** (Entry for tiny movement packets)
+    *   Ghidra: `1410f4560`
+    *   Signature: `48 83 EC ? 83 89 ? ? ? ? ? 48 85 D2`
 
-### Incoming (SMSG)
+*   **`Parse_MovementUpdate_Payload`** (Actual parser for tiny movement)
+    *   Ghidra: `1410eb740`
+    *   Signature: `48 83 EC ? 48 8B 0D ? ? ? ? 48 8B D9 E8 ? ? ? ? 48 8B F8 48 85 C0`
 
-*   **Method:** SafetyHook mid-function hook (`MidHook`) inside `FUN_1412e9390`.
-*   **Target:** Instructions `MOV RDX, [RBP+STACK_OFFSET_MESSAGE_DATA_PTR]` at offsets `+0x219`, `+0x228`, `+0x3D4`, and `+0x3E3` relative to function start (immediately before handler `call` instructions).
-*   **Data Extraction:** Uses `SafetyHookContext` (`ctx`) to read `RBX` (for `pMsgConn`) and `RBP` (for `messageDataPtr` stack offset). Reads `handlerInfoPtr` from `pMsgConn+0x48`. Dereferences pointers using struct offsets to get `messageId`, `msgDefPtr`, and `messageSize`. **This extraction logic works consistently across all four hook sites.**
-*   **Status:** Functional, captures individual plaintext messages from all identified call paths within this dispatcher. Relies on stack offset `STACK_OFFSET_MESSAGE_DATA_PTR` (`[RBP - 0x18]`) which could be fragile across game updates.
+*   **`SMSG_Handler_AgentUpdate_0x0008`** (Entry for 116-byte full agent updates)
+    *   Ghidra: `14093f7e0`
+    *   Signature: `48 83 EC ? 83 FA ? 0F 85 ? ? ? ? E8`
 
-## Identified Packet Headers
+*   **`DAT_142578428`** (Global table for polymorphic parser objects)
+    *   Ghidra: `142578428`
+    *   **Discovery Method:** Set a memory write breakpoint on `(Base Address of Gw2-64.exe) + 0x2578828` and trigger game initialization. The instruction that writes to it will be in the table initializer.
 
-See `PacketHeaders.h` for the current list of known `CMSG_HeaderId` and `SMSG_HeaderId` values. This is significantly incomplete, especially for SMSG.
+## Reference: Original Data Structure Findings
 
-## Current Challenges & Next Steps
+*These offsets from the original analysis remain a valuable reference for the `Msg::DispatchStream` hook but may be fragile across updates.*
 
-1.  **Server Differentiation:** Determine how to reliably distinguish packets from the Game Server vs. Login/Auth Server.
-    *   Investigate if the `pMsgConn` instance address differs between phases.
-    *   Investigate the `pHandlerCtx` pointer (`R8` passed to dispatcher) for type information or different target objects.
-    *   Re-examine `pMsgConn` structure for other potential differentiating fields.
-    *   Update `PacketInfo`, `PacketProcessor`, and `PacketHeaders` to incorporate server type context once identified.
-2.  **Opcode Identification:** Systematically identify more CMSG and especially SMSG opcodes by correlating logged packets with in-game actions and adding them to `PacketHeaders.h`.
-3.  **Structure Analysis:** Begin reverse engineering the data payload (`PacketInfo.data`) for identified opcodes to create corresponding C++ structs.
-4.  **Hook Completeness/Stability:**
-    *   **Resolved (for FUN_1412e9390):** All four identified handler call preparation sites within the main dispatcher are now hooked, ensuring comprehensive capture of messages processed by this function. (Further investigation might be needed if *other* dispatch functions exist).
-    *   Monitor the stability of using the stack offset `STACK_OFFSET_MESSAGE_DATA_PTR` (`[RBP - 0x18]`) for the message data pointer. If it breaks, investigate alternative methods (e.g., reading `RDX` directly before the `call` if possible with SafetyHook or other techniques).
-5.  **Performance & Memory:** Implement packet log limiting. Evaluate if moving processing out of the hook callback into a separate thread is necessary.
+*   **`MsgConn` Context** (Relative to `pMsgConn`/RDX in `Msg::DispatchStream`):
+    *   `+0x48`: `void* handlerInfoPtr` (Pointer to `Handler Info Structure`)
+    *   `+0x94`: `uint32_t bufferReadIdx`
+    *   `+0xA0`: `uint32_t bufferWriteIdx`
+*   **`Handler Info Structure`** (Relative to `handlerInfoPtr`):
+    *   `+0x00`: `uint16_t messageId` (Opcode)
+    *   `+0x08`: `void* msgDefPtr` (Pointer to `Message Definition Structure`)
+    *   `+0x18`: `void* handlerFuncPtr` (Pointer to a handler function)
+*   **`Message Definition Structure`** (Relative to `msgDefPtr`):
+    *   `+0x20`: `uint32_t messageSize`
 
 ## Toolchain
 
 *   **Hooking:** MinHook (for entry points), SafetyHook (for mid-function/inline)
-*   **Reverse Engineering:** IDA Pro / Ghidra
-*   **Memory Analysis:** Cheat Engine (Structure Dissect), ReClass.NET
-*   **Debugging:** Visual Studio Debugger, Console Output (`std::cout`, `OutputDebugStringA`)
+*   **Reverse Engineering (Static):** Ghidra
+*   **Memory Analysis & Debugging (Dynamic):** Cheat Engine (Structure Dissect, Memory View, Breakpoints, Memory Breakpoints)
 *   **Language/UI:** C++, ImGui
+
+## Current Challenges & Next Steps
+
+1.  **Opcode Identification:** Systematically identify more SMSG opcodes by correlating logs with in-game actions. The `SMSG_UPDATE_BLOCK` (opcode 1) is a critical candidate for future analysis due to its high frequency and varying sizes.
+2.  **Structure Analysis:** Continue building out C++ structs for identified opcodes and their various sizes/subtypes.
+3.  **Hook Stability:** Monitor the stability of the `STACK_OFFSET_MESSAGE_DATA_PTR` (`[RBP - 0x18]`) in the `Msg::DispatchStream` hook. If it breaks, a more robust method of finding the message data pointer may be needed.
+4.  **Server Differentiation:** Re-investigate how to reliably distinguish packets from Game Server vs. Login/Auth Server using the `MsgConn` context (`pMsgConn+0x00` `connTypeId`) now that the deeper architecture is understood.
