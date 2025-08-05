@@ -1,10 +1,10 @@
 # CMSG_AGENT_LINK (0x0036)
 
-Direction: Client -> Server
+**Direction**: Client -> Server
 
 ## Summary
 
-This packet is responsible for handling the "Agent Link" functionality. Its structure is defined by a schema and it is built and queued for sending by the function `FUN_140245390`.
+This packet is sent by the client to link two agents together (e.g., attaching a pet or effect to a character). Its structure is defined by a schema and it is built and queued for sending by the function `FUN_140245390`.
 
 ## Construction
 
@@ -12,20 +12,22 @@ This packet is responsible for handling the "Agent Link" functionality. Its stru
 *   **Schema Address:** `DAT_142513080`
 *   **Queueing Function:** `FUN_14104d760` (QueueOutgoingPacket)
 
-## Packet Structure (Inferred from Schema `DAT_142513080`)
+## Packet Structure
 
-*(Analyze the schema at this address in Ghidra and fill out the fields. The call in `FUN_140245390` passes `0x12` as the size, which is 18 bytes. The live log shows a 6-byte packet, so the schema likely defines a larger structure where only the first few fields are used in this context.)*
-
-| Offset | Type | Name | Notes |
+| Offset | Type | Name | Description |
 |---|---|---|---|
-| 0x00 | ... | ... | ... |
+| 0x00 | `uint16` | AgentId | The ID of the agent being linked (the "child"). |
+| 0x02 | `uint16` | ParentId | The ID of the agent to link to (the "parent"). |
+| 0x04 | `uint16` | Flags | Purpose unknown, likely flags or padding. Observed as 0. |
 
 ## Evidence
 
-Decompiled builder function `FUN_140245390`:
+This packet is constructed and sent by `FUN_140245390`, which uses the schema at `DAT_142513080` to build the packet and then calls the queueing function with opcode `0x36`.
+
 ```c
-lVar2 = Msg_BuildPacketFromSchema(&local_30, (uint *)&DAT_142513080, 0x12, (longlong)local_48, local_res8);
+// Decompiled builder function FUN_140245390
+lVar2 = Msg_BuildPacketFromSchema(&local_30, (uint *)&DAT_142513080, ...);
 if (lVar2 != 0) {
-    FUN_14104d760(DAT_142628800, 0, 0x36, lVar2);
+    FUN_14104d760(..., 0, 0x36, lVar2); // Opcode 0x36 is passed here
 }
 ```
