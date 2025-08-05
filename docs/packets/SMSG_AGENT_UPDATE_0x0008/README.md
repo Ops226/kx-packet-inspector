@@ -10,3 +10,7 @@ This packet is a prime example of polymorphism in the Guild Wars 2 network proto
 
 *   **[Tiny Movement Variant](./tiny-movement-variant.md):** A small, high-frequency packet used for minor positional updates.
 *   **Full Agent Spawn Variant:** A large packet used to communicate the full state of a newly spawned agent, including health, appearance, and other attributes. (Documentation for this variant is forthcoming).
+
+## Shared Architecture
+
+All variants of this packet are handled by a common, subtype-based dispatch system. For a detailed explanation of this pattern, see the **[Architecture Overview](./architecture-overview.md)**.
