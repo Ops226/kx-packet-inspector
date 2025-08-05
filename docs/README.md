@@ -4,16 +4,17 @@ Welcome to the official documentation for the KX Packet Inspector project.
 
 This repository aims to provide a powerful tool for understanding and analyzing network communication in Guild Wars 2. This documentation serves as a central hub for all reverse engineering findings, methodologies, and technical insights gained during the development of this tool.
 
-## What You'll Find Here
+## Documentation Structure
 
-*   **Reverse Engineering Findings:** Dive deep into the structure of Guild Wars 2's network protocol, including detailed packet layouts, handler chains, and architectural discoveries. Start with `ReverseEngineering.md` for a comprehensive overview.
-*   **Methodologies:** Learn the techniques and strategies employed for successful reverse engineering of complex game binaries. Explore the `methodologies/` folder for guides like the `packet-parser-discovery-playbook.md`.
-*   **Raw Decompilations:** Access raw C code output from Ghidra for in-depth analysis and verification in the `raw_decompilations/` folder.
+*   **[System Architecture](./system-architecture.md):** A high-level overview of the entire network message dispatch system.
+*   **[Packets](./packets):** Detailed, evidence-backed analysis of specific packet families and their variants.
+*   **[Methodologies](./methodologies):** Guides and playbooks for reverse engineering the game client.
 
 ## Getting Started
 
-If you're looking to understand how Guild Wars 2 network packets work, begin by reading `ReverseEngineering.md`.
-
-For developers looking to contribute or understand the reverse engineering process, consult `methodologies/packet-parser-discovery-playbook.md`.
+*   To understand the overall network architecture, start with **[System Architecture](./system-architecture.md)**.
+*   For information on specific packets, see the **[Packets](./packets)** directory.
+*   For our advanced, static-analysis-driven process, consult the **[Packet Parser Discovery Playbook](./methodologies/packet-parser-discovery-playbook.md)**.
+*   As a supplementary technique, see the **[Memory Correlation Workflow](./methodologies/memory-correlation-workflow.md)** for validating findings with live memory.
 
 We hope this documentation provides valuable insights and aids in your exploration of Guild Wars 2's internals.
