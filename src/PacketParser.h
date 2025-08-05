@@ -24,7 +24,28 @@ namespace kx::Parsing {
      */
     std::optional<std::string> ParseMovementPacket(const kx::PacketInfo& packet);
 
-    // Declarations for other packet parsers can be added here later.
-    // e.g., std::optional<kx::Packets::SomeOtherPayload> ParseSomeOtherPacket(const kx::PacketInfo& packet);
+    /**
+     * @brief Attempts to parse the payload of a SMSG_PLAYER_STATE_UPDATE packet.
+     * @param packet The PacketInfo object containing the packet data.
+     * @return An optional containing a formatted string representation of the payload
+     *         if parsing is successful and applicable, otherwise std::nullopt.
+     */
+    std::optional<std::string> ParsePlayerStateUpdatePacket(const kx::PacketInfo& packet);
+
+    /**
+     * @brief Attempts to parse the payload of a SMSG_TIME_SYNC packet.
+     * @param packet The PacketInfo object containing the packet data.
+     * @return An optional containing a formatted string representation of the payload
+     *         if parsing is successful and applicable, otherwise std::nullopt.
+     */
+    std::optional<std::string> ParseTimeSyncPacket(const kx::PacketInfo& packet);
+
+    /**
+     * @brief Attempts to parse the payload of a CMSG_AGENT_LINK packet.
+     * @param packet The PacketInfo object containing the packet data.
+     * @return An optional containing a formatted string representation of the payload
+     *         if parsing is successful and applicable, otherwise std::nullopt.
+     */
+    std::optional<std::string> ParseAgentLinkPacket(const kx::PacketInfo& packet);
 
 } // namespace kx::Parsing

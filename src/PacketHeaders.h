@@ -36,23 +36,18 @@ namespace kx {
         MOVEMENT = 0x0012,
         USE_SKILL = 0x0017,
         MOUNT_MOVEMENT = 0x0018,
+		AGENT_LINK = 0x0036, // unsure, it's never sent by the client
         DESELECT_AGENT = 0x00DD,
         SELECT_AGENT = 0x00E5,
         // Note: Values above 256 (0x0100) won't work with magic_enum
         INTERACT_WITH_AGENT = 0x010E, // Likely: Player initiates interaction with an agent
-        INTERACTION_RESPONSE = 0x010F, // Likely: Player selects dialogue option / continues interaction
+    	INTERACTION_RESPONSE = 0x010F, // Likely: Player selects dialogue option / continues interaction
     };
 
     // --- Server->Client Header IDs ---
     enum class SMSG_HeaderId : uint16_t {
-        // --- Opcodes identified with higher confidence ---
-        CONNECTION_INFO = 0x0000, // Tentative: Core protocol/connection sync? (Opcode 0 often special)
-        UPDATE_BLOCK = 0x0001, // Frequent, variable size; likely bundles various updates (player/env/agent states)
         PLAYER_STATE_UPDATE = 0x0002, // Periodic update related to player (idle anim, resources, pos confirm?)
-        ITEM_UPDATE = 0x0005, // Likely: Inventory, wallet, equipment sync post-load
-        CHARACTER_DATA = 0x0007, // Likely: Build, trait, equipment sync post-load
-        AGENT_UPDATE = 0x0008, // Frequent when NPCs/agents nearby; pos, state, stats updates
-        POST_LOAD_PLAYER_STATE = 0x0009, // Tentative: Player state set after map load (skills? movement?)
+        PERFORMANCE_MSG = 0x0008, // Pretty sure
         INTERACTION_DIALOGUE = 0x000F, // Highly likely: Multi-part message sequence for NPC dialogue/interaction data
         UI_MESSAGE = 0x0014, // Tentative: UI state, notifications, chat, mail headers?
         PLAYER_DATA_UPDATE = 0x0015, // Likely: Currency, inventory changes, achievements
@@ -69,17 +64,7 @@ namespace kx {
         AGENT_SYNC = 0x0034, // Likely: Periodic sync of multiple nearby agents' pos/state
         AGENT_LINK = 0x0036, // Tentative: Linking agents (target, relationship?)
         SOCIAL_UPDATE = 0x0039, // Tentative: Guild, party, friends list update?
-        TIME_SYNC = 0x003F, // Highly likely: Periodic server tick/time update
-
-        // --- Opcodes observed but purpose less certain (Keep noted/commented) ---
-        // MAP_SEQUENCE_STEP  = 0x0004, // Tentative: Simple ack/flag during map load (Size 2)
-        // AREA_INFO_UPDATE   = 0x000D, // Tentative: Infrequent, maybe area/group/proximity state?
-        // GENERIC_FLAG       = 0x001E, // Tentative: Simple flag/status update (Size 4)
-        // ACTIVITY_STATUS_UPDATE= 0x0027, // Likely: Zone instance / AFK status? (Size 2 or 6)
-        // PLAYER_VALUE_SET   = 0x003A, // Tentative: Setting a specific player value? (Size 11)
-
-        // --- Placeholders for future additions ---
-        // EXAMPLE_PACKET_NAME = 0xABCD,
+        TIME_SYNC = 0x003F, // Periodic server tick/time update
     };
 
 
