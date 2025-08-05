@@ -24,11 +24,12 @@ The client's network message processing is fundamentally data-driven. Instead of
 
 ## Workflow
 
-### Phase 1: Locate the Dispatcher and Schema
+### Phase 1: Locate the Primary Handler and Schema
 
-1.  **Start at the `Gs2c_PostParseDispatcher`:** This function is the most efficient starting point for analyzing a specific opcode. It contains a large `switch` statement that maps opcodes to their handlers.
-2.  **Identify the Opcode's Case:** Find the `case` block for the opcode you are investigating.
-3.  **Locate the Schema:** Within the `case` block, you will find a call to `Msg_BuildArgs_FromSchema` or a similar function. The second argument to this function is a pointer to the schema for that opcode (e.g., `&DAT_14251xxxx`).
+1.  **Start at `Gs2c_SrvMsgDispatcher`**: This is the primary function for processing incoming network messages. Analyze its dispatch mechanism (which involves a table lookup in the `MsgConn` structure, not a large switch) to identify the true, primary handler function for the opcode you are investigating.
+    *   *Note*: While `Gs2c_PostParseDispatcher` contains many `case` statements for opcodes, it is an application-level dispatcher that processes *already parsed* messages or internal events, not the initial network dispatch. Use it only if your tracing from `Gs2c_SrvMsgDispatcher` explicitly leads there.
+2.  **Identify the Handler Function**: Once you've traced the opcode to its primary handler, focus on that function's decompiled code.
+3.  **Locate the Schema:** Within the handler, or a function it calls for parsing, you will find a call to `Msg_BuildArgs_FromSchema` or a similar function. The second argument to this function is a pointer to the schema for that opcode (e.g., `&DAT_14251xxxx`).
 
 ### Phase 2: Decode the Schema
 
@@ -47,9 +48,9 @@ The client's network message processing is fundamentally data-driven. Instead of
 3.  **Document the Handler Logic:** Provide a summary of the handler's behavior and how it uses the packet's data.
 4.  **Provide Evidence:** Include snippets of the decompiled code from the dispatcher and handler to support your analysis.
 
-## Example: `SMSG_0x003F` (String Notification)
+## Example (Illustrative only): `SMSG_0x0040` (String Notification, Channel 2)
 
-*   **Dispatcher:** `Gs2c_PostParseDispatcher`, `case 0x3F`.
+*   **Dispatcher (Application-Level):** `Gs2c_PostParseDispatcher`, `case 0x40`.
 *   **Schema:** `&DAT_142511600`.
 *   **Handler:** `MsgConn_DispatchString` (with `channel = 1`).
 *   **Analysis:** By decoding the schema and analyzing the handler, we can determine that this packet contains a null-terminated ANSI string that is dispatched to the game's string handling system on channel 1.
