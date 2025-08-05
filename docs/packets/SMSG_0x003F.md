@@ -9,7 +9,7 @@ This message carries a null-terminated ANSI string that is dispatched through th
 
 ## Dispatcher Path
 
-Gs2c_PostParseDispatcher (case 0x3F):
+`Gs2c_PostParseDispatcher` (case 0x3F) routes to `MsgConn_DispatchString` on channel 1.
 
 ```
 lVar16 = Msg_BuildArgs_FromSchema((short *)(param_1 + 0x170), &DAT_142511600, param_3[2], (ulonglong)(param_3 + 4));

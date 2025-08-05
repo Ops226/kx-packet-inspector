@@ -18,7 +18,7 @@ The client's network message processing is fundamentally data-driven. Instead of
 
 *   **Dispatchers:** These are the central functions that orchestrate the message handling process. The key dispatchers are:
     *   `Gs2c_SrvMsgDispatcher`: The entry point for incoming server messages.
-    *   `Gs2c_PostParseDispatcher`: A secondary dispatcher that routes parsed messages to their handlers, often via a large `switch` statement.
+    *   `Gs2c_PostParseDispatcher`: A secondary dispatcher that routes parsed messages to their handlers, often via a large `switch` statement. **Note:** This dispatcher is not strictly part of the networking layer and handles more general system events.
 *   **Schemas:** Each opcode has a corresponding schema (e.g., `&DAT_14251xxxx`) that defines the structure of the packet. These schemas are interpreted by the `Msg_ParseAndDispatch_BuildArgs` function.
 *   **Handlers:** These are the functions that are ultimately called to handle the logic of a specific packet. They receive the data parsed from the packet as a typed argument tuple.
 

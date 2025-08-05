@@ -38,6 +38,7 @@ This document provides a detailed breakdown of this architecture, drawing eviden
 
 *   **Function:** `Gs2c_PostParseDispatcher` (see `raw_decompilations/Gs2c_PostParseDispatcher.c`)
 *   **Role:** After a message has been parsed into an argument tuple, this function is responsible for dispatching it to the appropriate handler. It contains a large `switch` statement that routes messages based on their opcode.
+*   **Note on Networking:** Subsequent analysis has revealed that `Gs2c_PostParseDispatcher` is not part of the core networking stack. It is a more general-purpose message dispatcher that handles a variety of internal system events, not just network messages.
 *   **Handler Blocks:** For contiguous ranges of opcodes, the `Gs2c_PostParseDispatcher` may delegate to specialized handler blocks, such as the one at `FUN_14025DA50` which handles opcodes from `0x2B` to `0x50`.
 
 ## Packet Flow Example: `SMSG_0x003F` (String Notification)
@@ -46,11 +47,11 @@ The handling of `SMSG_0x003F` provides a clear example of the entire dispatch pr
 
 1.  **Dispatch:** `Gs2c_SrvMsgDispatcher` receives the raw bytes for the `0x003F` message.
 2.  **Parsing:** It calls `Msg_ParseAndDispatch_BuildArgs` with the schema for `0x003F` (located at `DAT_142511600`). This schema defines the packet as containing a null-terminated ANSI string.
-3.  **Handling:** The `Gs2c_PostParseDispatcher` takes the parsed string and, for opcode `0x003F`, dispatches it to `MsgConn_DispatchString` with `channel = 1`. The `SMSG_0x0040` packet follows an identical flow but is dispatched to `channel = 2`.
+3.  **Handling:** After parsing, the `Gs2c_PostParseDispatcher` internally routes the message. For opcode `0x003F`, it dispatches the parsed string to `MsgConn_DispatchString` with `channel = 1`. The `SMSG_0x0040` packet follows an identical flow but is dispatched to `channel = 2`.
 
 ## Notes on Agent Messages
 
-*   The `gs2c` agent messages are in the `0x31` to `0x88` range.
+*   The `gs2c` agent messages are in the 31 to 88 range (decimal).
 *   The message `gs2c 0x0008` was previously thought to be an agent update but is now understood to be a small performance-related message. The size-based polymorphic dispatch described in the `archive` directory is not the primary mechanism for message handling.
 
 ## Implications for Reverse Engineering
