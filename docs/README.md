@@ -13,7 +13,8 @@ This repository aims to provide a powerful tool for understanding and analyzing 
 ## Getting Started
 
 *   To understand the overall network architecture, start with **[System Architecture](./system-architecture.md)**.
-*   For information on specific packets, see the **[Packets](./packets)** directory.
+*   For a quick overview of all documented packets, see the **[Packet Reference](./packets/packet-reference.md)**.
+*   For detailed information on specific packets, see the **[Packets](./packets)** directory.
 *   For our advanced, static-analysis-driven process, consult the **[Packet Parser Discovery Playbook](./methodologies/packet-parser-discovery-playbook.md)**.
 *   As a supplementary technique, see the **[Memory Correlation Workflow](./methodologies/memory-correlation-workflow.md)** for validating findings with live memory.
 

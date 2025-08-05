@@ -1,5 +1,5 @@
 
-undefined8 * SrvMsgDispatcher(undefined8 *param_1,byte *param_2,undefined4 *param_3)
+undefined8 * Gs2c_SrvMsgDispatcher(undefined8 *param_1,byte *param_2,undefined4 *param_3)
 
 {
   byte *pbVar1;

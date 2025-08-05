@@ -1,5 +1,5 @@
 
-void FUN_1410f4560(longlong param_1,longlong param_2)
+void Agent_TinyMovement_OnUpdate(longlong param_1,longlong param_2)
 
 {
   longlong lVar1;

@@ -12,7 +12,7 @@ This document details the practical implementation of the packet hooking mechani
 
 ### Incoming (SMSG)
 
-*   **Method:** SafetyHook mid-function hook (`MidHook`) inside the main message dispatcher function (`Msg::DispatchStream`).
+*   **Method:** SafetyHook mid-function hook (`MidHook`) inside the main message dispatcher function, `Gs2c_SrvMsgDispatcher` (also referred to as `Msg::DispatchStream` in some contexts).
 *   **Target:** The hook specifically targets the `MOV RDX, [RBP+STACK_OFFSET_MESSAGE_DATA_PTR]` instruction at multiple offsets within the function. This instruction is responsible for loading the pointer to the message data just before the handler function is called.
 *   **Data Extraction:** The hook uses the `SafetyHookContext` to read registers (`RBX` and `RBP`) to get pointers to the connection context (`pMsgConn`) and the message data. From there, it dereferences pointers using the known structure layouts to extract the message ID, size, and payload.
 *   **Status:** Functional and captures plaintext messages from all identified call paths within the main dispatcher. **Note:** This method's reliance on a hardcoded stack offset (`[RBP - 0x18]`) is potentially fragile and may break with future game updates.
@@ -26,16 +26,16 @@ Function signatures are provided to help locate these functions after a game upd
 *   **Purpose:** Prepares outgoing packets for sending.
 *   **Signature:** `40 ? 48 83 EC ? 48 8D ? ? ? 48 89 ? ? 48 89 ? ? 48 89 ? ? 4C 89 ? ? 48 8B ? ? ? ? ? 48 33 ? 48 89 ? ? 48 8B ? E8`
 
-### Incoming Packets (MsgDispatch)
+### Incoming Packets (Gs2c_SrvMsgDispatcher / Msg::DispatchStream)
 
-*   **Internal Name:** `Msg::DispatchStream`
+*   **Internal Name:** `Gs2c_SrvMsgDispatcher` (also known as `Msg::DispatchStream`)
 *   **Purpose:** Processes a buffer of one or more decrypted, framed messages and calls the appropriate handler for each.
 *   **Signature:** `48 89 5C 24 ? 4C 89 44 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8B EC 48 83 EC ? 8B 82`
 
 ### Obsolete Target (MsgRecv - Low Level)
 
 *   **Signature:** `40 55 41 54 41 55 41 56 41 57 48 83 EC ? 48 8D 6C 24 ? 48 89 5D ? 48 89 75 ? 48 89 7D ? 48 8B 05 ? ? ? ? 48 33 C5 48 89 45 ? 44 0F B6 12`
-*   **Reason for Deprecation:** Hooking this function was abandoned because it operates on the raw, encrypted message buffer. This required performing RC4 decryption manually and did not provide cleanly framed messages. The current approach of hooking the `Msg::DispatchStream` function is far more effective as it provides access to individual, plaintext messages after decryption and framing have already been handled by the game client.
+*   **Reason for Deprecation:** Hooking this function was abandoned because it operates on the raw, encrypted message buffer. This required performing RC4 decryption manually and did not provide cleanly framed messages. The current approach of hooking the `Gs2c_SrvMsgDispatcher` function is far more effective as it provides access to individual, plaintext messages after decryption and framing have already been handled by the game client.
 
 ## Key Data Structures & Offsets
 

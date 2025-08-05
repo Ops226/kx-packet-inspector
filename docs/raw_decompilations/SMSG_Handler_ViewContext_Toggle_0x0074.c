@@ -1,5 +1,5 @@
 
-void SMSG_Handler_AgentUpdate_0x0008(undefined8 param_1,int param_2)
+void SMSG_Handler_ViewContext_Toggle_0x0074(undefined8 param_1,int param_2)
 
 {
   uint uVar1;
@@ -9,12 +9,12 @@ void SMSG_Handler_AgentUpdate_0x0008(undefined8 param_1,int param_2)
   if (param_2 != 0x74) {
     return;
   }
-  ppuVar3 = FUN_141353cc0();
+  ppuVar3 = VdfContext_Get();
   uVar1 = (**(code **)(*ppuVar3 + 0x168))(ppuVar3);
   if (uVar1 != 0) {
     if (uVar1 == 1) {
       iVar2 = FUN_140a59500(2,0x19,1);
-      ppuVar3 = FUN_141353cc0();
+      ppuVar3 = VdfContext_Get();
                     /* WARNING: Could not recover jumptable at 0x00014093f86b. Too many branches */
                     /* WARNING: Treating indirect jump as call */
       (**(code **)(*ppuVar3 + 0x170))(ppuVar3,-(iVar2 != 0) & 2,*(code **)(*ppuVar3 + 0x170));
@@ -26,7 +26,7 @@ void SMSG_Handler_AgentUpdate_0x0008(undefined8 param_1,int param_2)
                     0xef6,0x141b025e8,(ulonglong)uVar1);
     }
   }
-  ppuVar3 = FUN_141353cc0();
+  ppuVar3 = VdfContext_Get();
                     /* WARNING: Could not recover jumptable at 0x00014093f889. Too many branches */
                     /* WARNING: Treating indirect jump as call */
   (**(code **)(*ppuVar3 + 0x170))(ppuVar3,1,*(code **)(*ppuVar3 + 0x170));
