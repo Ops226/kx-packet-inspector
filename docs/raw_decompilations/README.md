@@ -1,13 +1,9 @@
 # Raw Decompilations
 
-This directory contains raw decompiled C code snippets from the Guild Wars 2 client. These files are provided as direct evidence and detailed context for understanding the game's network message processing system, as described in the [System Architecture](../../system-architecture.md) document.
+This directory contains raw decompiled C code snippets from the Guild Wars 2 client, provided as direct evidence for the architectural documents.
 
-The decompilations here are specifically chosen to illustrate key components of the dynamic message dispatch system:
+The decompilations are organized by their primary domain:
 
-*   **`Gs2c_SrvMsgDispatcher.c`**: The primary server message dispatcher.
-*   **`Msg_BuildArgs_FromSchema.c`**: The function responsible for building message arguments from schemas.
-*   **`Msg_ParseAndDispatch_BuildArgs.c`**: The schema virtual machine that parses raw bytes into structured data tuples.
-*   **`Gs2c_PostParseDispatcher.c`**: An example of a dynamic post-parse handler.
-*   **`SMSG_PostParse_Handler_Type03FE.c`**: Another example of a dynamic post-parse handler, specifically referenced in the [Packet Parser Discovery Playbook](../../methodologies/packet-parser-discovery-playbook.md).
-
-These files are intended for advanced analysis and provide the low-level details that back the high-level architectural descriptions.
+*   **[/smsg/](./smsg/)**: Functions related to the Server-to-Client message pipeline.
+*   **[/cmsg/](./cmsg/)**: Functions related to the Client-to-Server message pipeline.
+*   **[/common/](./common/)**: Shared utility functions, such as the schema parsers, used by both pipelines.
