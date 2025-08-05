@@ -113,7 +113,7 @@ struct smsg_time_sync_seed {
 
 ## Mapping Status
 
-- Handler mapping via SrvMsgDispatcher selector (+0x18) is TBD. If 0x003F has a special fastpath (seed/epoch), it may bypass the generic table; both paths will be resolved later.
+- The exact handler for `SMSG_TIME_SYNC` must be discovered via dynamic analysis (e.g., setting a breakpoint at `"Gw2-64.exe"+FD1ACD` within `Gs2c_SrvMsgDispatcher` and observing the `RAX` register when this opcode is processed). This page focuses on stable on-wire decoding to unblock consumers now, as the parsing logic is handled by `Msg_ParseAndDispatch_BuildArgs` based on a schema.
 
 ## Consumer Guidance
 
