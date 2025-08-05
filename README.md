@@ -28,7 +28,7 @@ The primary goal is to facilitate learning about the game's network protocol and
 
 ## Status & Compatibility
 
-This tool targets specific internal functions identified via pattern scanning. Packet parsing logic relies on structure offsets and behaviors derived from reverse engineering specific game versions. See the [Reverse Engineering Notes](docs/ReverseEngineering.md) for details on current targets and assumptions.
+This tool targets specific internal functions identified via pattern scanning. Packet parsing logic relies on structure offsets and behaviors derived from reverse engineering specific game versions. See the [documentation](docs/README.md) for details on current targets and assumptions.
 
 *   **Potential Stability:** Core hooking (DirectX, function interception via patterns) may remain functional across some game patches.
 *   **Potential Breakage:** Significant game updates that modify internal network code, encryption methods, or data structure layouts **may break** this tool. This could affect function patterns, structure offsets (`GameStructs.h`), buffer state interpretation, or internal message processing logic (`PacketProcessor.cpp`).
