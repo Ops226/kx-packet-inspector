@@ -20,5 +20,6 @@ This repository aims to provide a powerful tool for understanding and analyzing 
 *   For the step-by-step process of discovering SMSG packet parsers, consult the **[SMSG Parser Discovery Playbook](./methodologies/smsg-parser-discovery-playbook.md)**.
 *   For the step-by-step process of discovering CMSG packet builders, consult the **[CMSG Parser Discovery Playbook](./methodologies/cmsg-parser-discovery-playbook.md)**.
 *   As a supplementary technique for validating findings with live memory, see the **[Memory Correlation Workflow](./methodologies/memory-correlation-workflow.md)**.
+*   For a guide on recovering function names from the executable, see **[Function Naming from Assert Strings](./methodologies/function-naming-from-assert-strings.md)**.
 
 We hope this documentation provides valuable insights and aids in your exploration of Guild Wars 2's internals.

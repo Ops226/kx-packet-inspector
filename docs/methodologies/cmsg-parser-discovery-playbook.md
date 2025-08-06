@@ -17,9 +17,9 @@ This document provides a concise, repeatable method for discovering Client-to-Se
 The client's outgoing message construction is a multi-stage process:
 
 1.  **Game Logic:** High-level functions related to player actions (e.g., movement, skill use) prepare the raw data for a packet.
-2.  **`Msg_BuildPacketFromSchema`:** This central utility function takes a schema and raw data, then orchestrates the serialization.
-3.  **`MsgBuilder_ProcessSchema`:** An internal "virtual machine" that `Msg_BuildPacketFromSchema` uses to write data into a packet buffer according to the schema's typecodes.
-4.  **Queueing & Sending:** The completed packet is then passed to a queueing mechanism (e.g., `QueueOutgoingPacket`) to be sent to the server.
+2.  **`MsgConn::BuildPacketFromSchema`:** This central utility function takes a schema and raw data, then orchestrates the serialization.
+3.  **`Msg::MsgPack`:** An internal "virtual machine" that `MsgConn::BuildPacketFromSchema` uses to write data into a packet buffer according to the schema's typecodes.
+4.  **Queueing & Sending:** The completed packet is then passed to a queueing mechanism (e.g., `MsgConn::QueuePacket`) to be sent to the server.
 
 ## Workflow: Tracing Packet Construction
 
@@ -27,18 +27,18 @@ The client's outgoing message construction is a multi-stage process:
 
 To understand how CMSG packets are structured, we must find where they are created.
 
-1.  **Start at the Core Packet Builder:** In Ghidra, go to `FUN_140fd4c10` (Proposed Name: `Msg_BuildPacketFromSchema`). This function is responsible for building a packet according to a schema.
-2.  **Find All Cross-References:** Find all code cross-references to `Msg_BuildPacketFromSchema`. This list represents every function in the game that initiates the construction of a CMSG packet.
+1.  **Start at the Core Packet Builder:** In Ghidra, go to `FUN_140fd4c10` (Proposed Name: `MsgConn::BuildPacketFromSchema`). This function is responsible for building a packet according to a schema.
+2.  **Find All Cross-References:** Find all code cross-references to `MsgConn::BuildPacketFromSchema`. This list represents every function in the game that initiates the construction of a CMSG packet.
 
 ### Phase 2: Analyze Calling Functions to Deduce Packet Structure and Purpose
 
-Each function that calls `Msg_BuildPacketFromSchema` corresponds to a specific CMSG packet.
+Each function that calls `MsgConn::BuildPacketFromSchema` corresponds to a specific CMSG packet.
 
 1.  **Select a Calling Function:** Choose one function from the cross-references discovered in Phase 1 (e.g., `FUN_140245390`).
 2.  **Examine its Code:** Analyze the decompiled code of this calling function. Look for:
-    *   **The Schema Address:** The second argument passed to `Msg_BuildPacketFromSchema` will be the pointer to the schema that defines this packet's structure (e.g., `&DAT_142513080`).
-    *   **The Data Payload:** Identify the local variables or parameters whose values are passed as the third argument (the raw data payload) to `Msg_BuildPacketFromSchema`. This data, combined with the schema, reveals the packet's fields.
-    *   **The Opcode (and Queueing Call):** Follow the control flow after `Msg_BuildPacketFromSchema` returns. You will typically find a call to a queueing function (e.g., `FUN_14104d760`, `QueueOutgoingPacket`). The opcode for the packet is usually passed as one of the arguments to this queueing function.
+    *   **The Schema Address:** The second argument passed to `MsgConn::BuildPacketFromSchema` will be the pointer to the schema that defines this packet's structure (e.g., `&DAT_142513080`).
+    *   **The Data Payload:** Identify the local variables or parameters whose values are passed as the third argument (the raw data payload) to `MsgConn::BuildPacketFromSchema`. This data, combined with the schema, reveals the packet's fields.
+    *   **The Opcode (and Queueing Call):** Follow the control flow after `MsgConn::BuildPacketFromSchema` returns. You will typically find a call to a queueing function (e.g., `FUN_14104d760`, `MsgConn::QueuePacket`). The opcode for the packet is usually passed as one of the arguments to this queueing function.
     *   **Deduce Purpose:** The name and context of the calling function, along with the data it's sending, will help you deduce the packet's purpose (e.g., `CMSG_PLAYER_MOVE`, `CMSG_USE_SKILL`).
 
 ### Phase 3: Decode the Schema and Document
@@ -51,11 +51,11 @@ Each function that calls `Msg_BuildPacketFromSchema` corresponds to a specific C
 
 ## Example: Agent Link Packet (`0x0036`)
 
-*   **Builder Call Found:** `FUN_140245390` is found to call `Msg_BuildPacketFromSchema`.
-*   **Schema & Opcode:** Inside `FUN_140245390`, the schema `DAT_142513080` is passed to `Msg_BuildPacketFromSchema`. The opcode `0x36` is passed to `FUN_14104d760` (`QueueOutgoingPacket`).
+*   **Builder Call Found:** `FUN_140245390` is found to call `MsgConn::BuildPacketFromSchema`.
+*   **Schema & Opcode:** Inside `FUN_140245390`, the schema `DAT_142513080` is passed to `MsgConn::BuildPacketFromSchema`. The opcode `0x36` is passed to `FUN_14104d760` (`MsgConn::QueuePacket`).
 *   **Data Analysis:** Further analysis of `FUN_140245390` reveals the data being passed matches the expected structure of an "Agent Link" update.
 *   **Documentation:** This leads to the creation of `packets/cmsg/CMSG_AGENT_LINK_0x0036.md` detailing its structure and purpose.
 
 ## Conclusion
 
-By systematically tracing calls to `Msg_BuildPacketFromSchema`, you can accurately discover and document all client-to-server packets. This static-first approach is efficient for CMSG because the builder function is a clear choke point in the outgoing data flow.
+By systematically tracing calls to `MsgConn::BuildPacketFromSchema`, you can accurately discover and document all client-to-server packets. This static-first approach is efficient for CMSG because the builder function is a clear choke point in the outgoing data flow.

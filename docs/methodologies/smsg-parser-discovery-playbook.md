@@ -17,9 +17,9 @@ This document provides a concise, repeatable method for discovering Server-to-Cl
 
 The client's incoming message handling is a multi-stage, dynamic process.
 
-1.  **`Gs2c_SrvMsgDispatcher`:** The primary entry point that receives the raw message stream.
-2.  **`Msg_ParseAndDispatch_BuildArgs`:** A schema "virtual machine" called by the dispatcher to parse raw bytes into a structured data tuple.
-3.  **Dynamic Post-Parse Handlers:** Crucially, there is **no single master handler**. After parsing, `Gs2c_SrvMsgDispatcher` calls a function pointer that is resolved at runtime. This means different handlers can be active depending on the game's state. `Gs2c_PostParseDispatcher` is just one of these many possible handlers.
+1.  **`Msg::DispatchStream`:** The primary entry point that receives the raw message stream.
+2.  **`MsgUnpack::ParseWithSchema`:** A schema "virtual machine" called by the dispatcher to parse raw bytes into a structured data tuple.
+3.  **Dynamic Post-Parse Handlers:** Crucially, there is **no single master handler**. After parsing, `Msg::DispatchStream` calls a function pointer that is resolved at runtime. This means different handlers can be active depending on the game's state. `Portal::DispatchMessage` is just one of these many possible handlers.
 
 ## Workflow: Dynamic Analysis First
 
@@ -28,19 +28,19 @@ The client's incoming message handling is a multi-stage, dynamic process.
 The only reliable way to find the correct handler for an SMSG packet is to observe the dispatch in a live game client.
 
 1.  **Log into the game world.** This ensures the full game connection is active.
-2.  **Set a Breakpoint:** In your debugger (e.g., Cheat Engine), set a breakpoint on the `CALL` instruction inside `Gs2c_SrvMsgDispatcher` that executes the dynamic post-parse handler. As of this writing, the address is:
+2.  **Set a Breakpoint:** In your debugger (e.g., Cheat Engine), set a breakpoint on the `CALL` instruction inside `Msg::DispatchStream` that executes the dynamic post-parse handler. As of this writing, the address is:
     `"Gw2-64.exe"+FD1ACD` (`call rax`)
-    This is the point immediately after `Msg_ParseAndDispatch_BuildArgs` returns, where `RAX` holds the pointer to the dynamically chosen handler.
+    This is the point immediately after `MsgUnpack::ParseWithSchema` returns, where `RAX` holds the pointer to the dynamically chosen handler.
 3.  **Trigger the Packet:** Perform an in-game action to generate the specific network traffic you want to inspect (e.g., move your character for `SMSG_PLAYER_STATE_UPDATE`).
 4.  **Capture the Handler Address:** When the breakpoint hits, the `RAX` register will contain the live memory address of the true post-parse handler for that specific message. The `RDX` register will contain a pointer to the parsed data tuple. **Record both addresses.**
-5.  **Examine the Parsed Data:** Using the `RDX` pointer, inspect the first few bytes of the parsed data tuple. This often provides a "type" or "ID" that helps uniquely identify the message (e.g., `FE 03` for the `SMSG_PostParse_Handler_Type03FE`).
+5.  **Examine the Parsed Data:** Using the `RDX` pointer, inspect the first few bytes of the parsed data tuple. This often provides a "type" or "ID" that helps uniquely identify the message (e.g., `FE 03` for the `Marker::Cli::ProcessAgentMarkerUpdate`).
 
 ### Phase 2: Analyze the Handler and Find the Schema
 
 Now, switch to your static analysis tool (Ghidra).
 
 1.  **Locate the Handler Function:** Convert the live handler address from your debugger into a static address in Ghidra (e.g., `140000000 + offset`). Go to this function.
-2.  **Identify the Schema:** The handler function (which received the parsed data tuple) will typically perform its logic by reading fields from this tuple. To discover the schema that created this tuple, you must trace backward from the `Gs2c_SrvMsgDispatcher` breakpoint. The schema address is passed as an argument to the schema parser (`"Gw2-64.exe"+FD43C0`) just before the handler is dynamically called.
+2.  **Identify the Schema:** The handler function (which received the parsed data tuple) will typically perform its logic by reading fields from this tuple. To discover the schema that created this tuple, you must trace backward from the `Msg::DispatchStream` breakpoint. The schema address is passed as an argument to the schema parser (`"Gw2-64.exe"+FD43C0`) just before the handler is dynamically called.
 
 ### Phase 3: Decode the Schema and Understand Handler Logic
 
@@ -53,11 +53,11 @@ Now, switch to your static analysis tool (Ghidra).
 2.  **Document the Packet Structure:** Create a field table detailing the offset (within the *parsed tuple*), type, name, and description of each field.
 3.  **Document the Handler Logic:** Provide a summary of the handler's behavior and link to its address. **Crucially, note that this handler was discovered dynamically and is context-dependent.**
 
-## Example: A Message Handled by `FUN_1413e5d90` (SMSG_PostParse_Handler_Type03FE)
+## Example: A Message Handled by `FUN_1413e5d90` (Marker::Cli::ProcessAgentMarkerUpdate)
 
-*   **Dynamic Discovery:** A breakpoint at `"Gw2-64.exe"+FD1ACD` is triggered. The `RAX` register contains the address for `FUN_1413e5d90` (renamed `SMSG_PostParse_Handler_Type03FE`), and `RDX` points to a data tuple beginning with bytes `FE 03 ...`.
-*   **Static Analysis:** We navigate to `SMSG_PostParse_Handler_Type03FE` in Ghidra. We analyze its code to see how it uses the fields from the data tuple passed to it. We then trace back to the schema parser call to find the schema that defines this structure.
-*   **Conclusion:** This dynamic approach allows us to correctly associate the packet data with its specific handler, `SMSG_PostParse_Handler_Type03FE`, bypassing incorrect assumptions about a single static dispatcher.
+*   **Dynamic Discovery:** A breakpoint at `"Gw2-64.exe"+FD1ACD` is triggered. The `RAX` register contains the address for `FUN_1413e5d90` (renamed `Marker::Cli::ProcessAgentMarkerUpdate`), and `RDX` points to a data tuple beginning with bytes `FE 03 ...`.
+*   **Static Analysis:** We navigate to `Marker::Cli::ProcessAgentMarkerUpdate` in Ghidra. We analyze its code to see how it uses the fields from the data tuple passed to it. We then trace back to the schema parser call to find the schema that defines this structure.
+*   **Conclusion:** This dynamic approach allows us to correctly associate the packet data with its specific handler, `Marker::Cli::ProcessAgentMarkerUpdate`, bypassing incorrect assumptions about a single static dispatcher.
 
 ## Conclusion
 

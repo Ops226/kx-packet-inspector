@@ -68,7 +68,7 @@ If your consumer language enforces alignment, mark this struct packed or read fi
 
 ## Mapping Status
 
-- The exact handler for `SMSG_PLAYER_STATE_UPDATE` must be discovered via dynamic analysis (e.g., setting a breakpoint at `"Gw2-64.exe"+FD1ACD` within `Gs2c_SrvMsgDispatcher` and observing the `RAX` register when this opcode is processed). This page focuses on stable on-wire decoding to unblock consumers now, as the parsing logic is handled by `Msg_ParseAndDispatch_BuildArgs` based on a schema.
+- The exact handler for `SMSG_PLAYER_STATE_UPDATE` must be discovered via dynamic analysis (e.g., setting a breakpoint at `"Gw2-64.exe"+FD1ACD` within `Msg::DispatchStream` and observing the `RAX` register when this opcode is processed). This page focuses on stable on-wire decoding to unblock consumers now, as the parsing logic is handled by `MsgUnpack::ParseWithSchema` based on a schema.
 
 ## Confidence
 

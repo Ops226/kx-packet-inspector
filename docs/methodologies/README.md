@@ -6,5 +6,6 @@ This directory contains detailed documentation on the methodologies and workflow
 *   **[Memory Correlation Workflow](./memory-correlation-workflow.md)**: Details a foundational technique for deducing packet structures by correlating live memory values with captured packet data.
 *   **[Packet Parser Discovery Playbook (SMSG Dynamic Analysis Workflow)](./smsg-parser-discovery-playbook.md)**: Provides a concise, repeatable method for discovering Server-to-Client (SMSG) packet structures based on dynamic analysis.
 *   **[Packet Parser Discovery Playbook (CMSG Workflow)](./cmsg-parser-discovery-playbook.md)**: Provides a concise, repeatable method for discovering Client-to-Server (CMSG) packet structures using a static-first approach.
+*   **[Function Naming from Assert Strings](./function-naming-from-assert-strings.md)**: Describes a powerful methodology for recovering original function names by analyzing debug assertion strings.
 
 These documents are crucial for understanding the approach taken in this project and for replicating or extending the research.
