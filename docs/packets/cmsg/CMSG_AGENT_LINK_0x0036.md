@@ -10,7 +10,7 @@ This packet is sent by the client to link two agents together (e.g., attaching a
 
 *   **Builder Function:** `CMSG::BuildAgentLink`
 *   **Schema Address:** `DAT_142513080`
-*   **Queueing Function:** `MsgConn::QueuePacket` (QueueOutgoingPacket)
+*   **Queueing Function:** `MsgConn::QueuePacket`
 
 ## Packet Structure
 

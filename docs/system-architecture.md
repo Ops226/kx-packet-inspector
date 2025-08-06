@@ -17,14 +17,10 @@ The unified process is as follows:
 
 ## Key Components
 
-### 1. The Server Message Dispatcher (`Msg::DispatchStream`)
-
-*   **Function:** `Msg::DispatchStream` (see `raw_decompilations/smsg/Msg::DispatchStream.c`)
+### 1. The Server Message Dispatcher (`Msg::DispatchStream`) (see `raw_decompilations/smsg/Msg::DispatchStream.c`)
 *   **Role:** This is the primary orchestrator for incoming game server messages. It manages the message stream, calls the parser for each message, and executes the **currently assigned dynamic post-parse handler function**.
 
-### 2. The Schema-Driven Parser (`MsgUnpack::ParseWithSchema`)
-
-*   **Function:** `MsgUnpack::ParseWithSchema` (see `raw_decompilations/common/MsgUnpack::ParseWithSchema.c`)
+### 2. The Schema-Driven Parser (`MsgUnpack::ParseWithSchema`) (see `raw_decompilations/common/MsgUnpack::ParseWithSchema.c`)
 *   **Role:** This function acts as a virtual machine that interprets a schema to parse a raw byte buffer into a typed argument tuple. Its role is central to understanding both incoming (SMSG) and outgoing (CMSG) packet structures.
 *   **Schema Typecodes:** The schema is defined by a series of typecodes. Key typecodes include:
     *   `0x02`: `u8`
@@ -45,14 +41,10 @@ The unified process is as follows:
 *   **`Gs2c_PostParseDispatcher` (see `raw_decompilations/smsg/Gs2c_PostParseDispatcher.c`):** This is understood to be **one of many possible dynamic post-parse handlers**. It is not the universal destination for all packets and handles a specific subset of application-level messages.
 
 ### 4. Outgoing Packet Builder (`MsgConn::BuildPacketFromSchema`)
-
-*   **Function:** `FUN_140fd4c10` (Proposed Name: `MsgConn::BuildPacketFromSchema`)
 *   **Role:** This is the primary utility function for constructing outgoing packets. It takes a schema and raw data, then serializes the data into a buffer.
 *   **Internal Call:** It internally uses `FUN_140fd2c70` (Proposed Name: `Msg::MsgPack`) which acts as the CMSG-specific schema serialization engine.
 
 ### 5. Outgoing Packet Queueing (`MsgConn::QueuePacket`)
-
-*   **Function:** `FUN_14104d760` (Proposed Name: `MsgConn::QueuePacket`)
 *   **Role:** Takes a fully constructed packet buffer and its opcode, and places it into a thread-safe queue.
 *   **Internal Call:** It calls `FUN_141051690` (Proposed Name: `MsgConn::EnqueuePacket`) which performs the low-level queueing operations.
 
@@ -71,7 +63,7 @@ The handling of a message whose parsed tuple begins with `FE 03` illustrates the
 
 This illustrates the CMSG construction and sending process:
 
-1.  **Game Logic:** A high-level game logic function (e.g., `FUN_140245390`, proposed `CMSG_Builder_AgentLink_0x0036`) is called to prepare an Agent Link packet.
+1.  **Game Logic:** A high-level game logic function (e.g., `FUN_140245390`, proposed `CMSG::BuildAgentLink`) is called to prepare an Agent Link packet.
 2.  **Packet Building:** It calls `MsgConn::BuildPacketFromSchema` (`FUN_140fd4c10`), providing the schema `DAT_142513080` and the packet data.
 3.  **Serialization:** `MsgConn::BuildPacketFromSchema` uses `Msg::MsgPack` (`FUN_140fd2c70`) to serialize the data into the internal packet buffer.
 4.  **Queueing:** The constructed packet is passed to `MsgConn::QueuePacket` (`FUN_14104d760`) along with its opcode `0x0036`.

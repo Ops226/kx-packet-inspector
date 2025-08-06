@@ -26,9 +26,9 @@ Function signatures are provided to help locate these functions after a game upd
 *   **Purpose:** Prepares outgoing packets for sending.
 *   **Signature:** `40 ? 48 83 EC ? 48 8D ? ? ? 48 89 ? ? 48 89 ? ? 48 89 ? ? 4C 89 ? ? 48 8B ? ? ? ? ? 48 33 ? 48 89 ? ? 48 8B ? E8`
 
-### Incoming Packets (Msg::DispatchStream / Msg::DispatchStream)
+### Incoming Packets (Msg::DispatchStream)
 
-*   **Internal Name:** `Msg::DispatchStream` (also known as `Msg::DispatchStream`)
+*   **Internal Name:** `Msg::DispatchStream` (previously known as `Gs2c_SrvMsgDispatcher`)
 *   **Purpose:** Processes a buffer of one or more decrypted, framed messages and calls the appropriate handler for each.
 *   **Signature:** `48 89 5C 24 ? 4C 89 44 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8B EC 48 83 EC ? 8B 82`
 
