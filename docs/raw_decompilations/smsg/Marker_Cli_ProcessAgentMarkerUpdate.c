@@ -1,5 +1,5 @@
-
-undefined8 SMSG_PostParse_Handler_Type03FE(undefined8 param_1,longlong param_2)
+// [OLD_NAME]: SMSG_PostParse_Handler_Type03FE
+undefined8 Marker::Cli::ProcessAgentMarkerUpdate(undefined8 param_1,longlong param_2)
 
 {
   longlong lVar1;

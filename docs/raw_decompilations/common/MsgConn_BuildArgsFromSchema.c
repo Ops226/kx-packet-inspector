@@ -1,5 +1,5 @@
-
-undefined8 Msg_BuildArgs_FromSchema(short *param_1,uint *param_2,uint param_3,ulonglong param_4)
+// [OLD_NAME]: Msg_BuildArgs_FromSchema
+undefined8 MsgConn::BuildArgsFromSchema(short *param_1,uint *param_2,uint param_3,ulonglong param_4)
 
 {
   uint uVar1;
@@ -32,7 +32,7 @@ undefined8 Msg_BuildArgs_FromSchema(short *param_1,uint *param_2,uint param_3,ul
   uVar1 = param_2[8];
   puVar2 = (ulonglong *)FUN_140fd6d70(local_38,uVar1);
   local_res18[0] = 0;
-  Msg_ParseAndDispatch_BuildArgs
+  MsgUnpack::ParseWithSchema
             (param_2,&local_res20,(ushort *)(param_3 + local_res20),puVar2,
              (longlong)puVar2 + (ulonglong)uVar1,local_38,local_res18,(uint *)0x0);
   if (0xffff < *(uint *)(param_1 + 10)) {

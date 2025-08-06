@@ -1,6 +1,7 @@
-
+// [OLD_NAME]: Msg_BuildPacketFromSchema
 undefined8
-Msg_BuildPacketFromSchema(short *param_1,uint *param_2,uint param_3,longlong param_4,uint *param_5)
+MsgConn::BuildPacketFromSchema
+          (short *param_1,uint *param_2,uint param_3,longlong param_4,uint *param_5)
 
 {
   uint uVar1;
@@ -29,9 +30,8 @@ Msg_BuildPacketFromSchema(short *param_1,uint *param_2,uint param_3,longlong par
       *param_5 = 0;
       local_58 = 0;
       local_50 = param_1;
-      MsgBuilder_ProcessSchema
-                (local_48,&local_58,param_2,&local_res20,(ulonglong)param_3 + param_4,(int *)param_5
-                 ,(uint *)0x0);
+      Msg::MsgPack(local_48,&local_58,param_2,&local_res20,(ulonglong)param_3 + param_4,
+                   (int *)param_5,(uint *)0x0);
       if (*(uint *)(param_1 + 10) < 0x10000) {
         if (local_24 != 0) {
           *param_5 = *(uint *)(param_1 + 10);

@@ -1,5 +1,5 @@
-
-void CMSG_Builder_AgentLink_0x0036(longlong param_1,undefined8 *param_2)
+// [OLD_NAME]: CMSG_Builder_AgentLink_0x0036
+void CMSG::BuildAgentLink(longlong param_1,undefined8 *param_2)
 
 {
   undefined4 uVar1;
@@ -22,10 +22,10 @@ void CMSG_Builder_AgentLink_0x0036(longlong param_1,undefined8 *param_2)
   local_20 = 0;
   local_28 = 0;
   local_30 = 1;
-  lVar2 = Msg_BuildPacketFromSchema
+  lVar2 = MsgConn::BuildPacketFromSchema
                     (&local_30,(uint *)&DAT_142513080,0x12,(longlong)local_48,local_res8);
   if (lVar2 != 0) {
-    QueueOutgoingPacket(DAT_142628800,0,0x36,lVar2);
+    MsgConn::QueuePacket(DAT_142628800,0,0x36,lVar2);
   }
   if (local_28 != 0) {
                     /* WARNING: Subroutine does not return */

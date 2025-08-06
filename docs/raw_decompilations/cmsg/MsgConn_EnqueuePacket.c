@@ -1,5 +1,5 @@
-
-void EnqueuePacketForSending
+// [OLD_NAME]: EnqueuePacketForSending
+void MsgConn::EnqueuePacket
                (byte *param_1,undefined4 param_2,undefined4 param_3,undefined4 param_4,
                undefined8 param_5,undefined8 param_6)
 

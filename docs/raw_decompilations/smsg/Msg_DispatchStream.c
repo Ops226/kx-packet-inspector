@@ -1,5 +1,5 @@
-
-undefined8 * Gs2c_SrvMsgDispatcher(undefined8 *param_1,byte *param_2,undefined4 *param_3)
+// [OLD_NAME]: Gs2c_SrvMsgDispatcher
+undefined8 * Msg::DispatchStream(undefined8 *param_1,byte *param_2,undefined4 *param_3)
 
 {
   byte *pbVar1;
@@ -97,7 +97,7 @@ LAB_140fd1e34:
       local_50 = (ulonglong *)FUN_140fd6d70(*(uint **)(param_2 + 200),uVar7);
       local_68[0] = 0;
       local_res10[0] = 0xffffffff;
-      puVar15 = Msg_ParseAndDispatch_BuildArgs
+      puVar15 = MsgUnpack::ParseWithSchema
                           (*(uint **)(*(longlong *)(param_2 + 0x48) + 8),(ulonglong *)&local_48,
                            puVar10,local_50,(longlong)local_50 + (ulonglong)uVar7,
                            *(undefined8 *)(param_2 + 200),local_68,local_res10);
@@ -175,7 +175,7 @@ LAB_140fd1dda:
     puVar5 = local_40;
     local_res20[0] = 0;
     local_res10[0] = 0xffffffff;
-    puVar15 = Msg_ParseAndDispatch_BuildArgs
+    puVar15 = MsgUnpack::ParseWithSchema
                         (*(uint **)(*(longlong *)(param_2 + 0x48) + 8),(ulonglong *)&local_58,
                          local_40,local_50,(longlong)local_50 + (ulonglong)uVar12,
                          *(undefined8 *)(param_2 + 200),local_res20,local_res10);

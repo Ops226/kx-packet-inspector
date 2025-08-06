@@ -1,9 +1,8 @@
-
+// [OLD_NAME]: MsgBuilder_ProcessSchema
 /* WARNING: Type propagation algorithm not settling */
 
-void MsgBuilder_ProcessSchema
-               (undefined8 *param_1,longlong *param_2,uint *param_3,longlong *param_4,
-               ulonglong param_5,int *param_6,uint *param_7)
+void Msg::MsgPack(undefined8 *param_1,longlong *param_2,uint *param_3,longlong *param_4,
+                 ulonglong param_5,int *param_6,uint *param_7)
 
 {
   uint *puVar1;
@@ -440,9 +439,7 @@ LAB_140fd315e:
       if (local_c0 != 0) {
         local_d8 = *param_2;
         lStack_d0 = param_2[1];
-        lVar3 = MsgBuilder_ProcessSchema
-                          (local_98,&local_d8,*(uint **)(param_3 + 6),&local_c0,0,param_6,
-                           (uint *)0x0);
+        lVar3 = MsgPack(local_98,&local_d8,*(uint **)(param_3 + 6),&local_c0,0,param_6,(uint *)0x0);
         if (*(int *)(lVar3 + 0x24) == 0) {
           param_1[3] = 0x3e6;
           param_1[1] = "Msg::MsgPack";
@@ -460,9 +457,8 @@ LAB_140fd315e:
         do {
           local_d8 = *param_2;
           lStack_d0 = param_2[1];
-          lVar3 = MsgBuilder_ProcessSchema
-                            (local_98,&local_d8,*(uint **)(param_3 + 6),&local_b8,0,param_6,
-                             (uint *)0x0);
+          lVar3 = MsgPack(local_98,&local_d8,*(uint **)(param_3 + 6),&local_b8,0,param_6,(uint *)0x0
+                         );
           if (*(int *)(lVar3 + 0x24) == 0) {
             param_1[3] = 0x3f0;
             param_1[1] = "Msg::MsgPack";
@@ -518,9 +514,8 @@ LAB_140fd315e:
         do {
           local_d8 = *param_2;
           lStack_d0 = param_2[1];
-          lVar3 = MsgBuilder_ProcessSchema
-                            (local_98,&local_d8,*(uint **)(param_3 + 6),&local_b0,0,param_6,
-                             (uint *)0x0);
+          lVar3 = MsgPack(local_98,&local_d8,*(uint **)(param_3 + 6),&local_b0,0,param_6,(uint *)0x0
+                         );
           if (*(int *)(lVar3 + 0x24) == 0) {
             param_1[3] = 0x400;
             param_1[1] = "Msg::MsgPack";
@@ -579,9 +574,8 @@ LAB_140fd315e:
         do {
           local_d8 = *param_2;
           lStack_d0 = param_2[1];
-          lVar3 = MsgBuilder_ProcessSchema
-                            (local_98,&local_d8,*(uint **)(param_3 + 6),&local_a8,0,param_6,
-                             (uint *)0x0);
+          lVar3 = MsgPack(local_98,&local_d8,*(uint **)(param_3 + 6),&local_a8,0,param_6,(uint *)0x0
+                         );
           if (*(int *)(lVar3 + 0x24) == 0) {
             param_1[3] = 0x410;
             param_1[1] = "Msg::MsgPack";

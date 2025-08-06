@@ -1,6 +1,6 @@
-
+// [OLD_NAME]: Msg_ParseAndDispatch_BuildArgs
 ulonglong *
-Msg_ParseAndDispatch_BuildArgs
+MsgUnpack::ParseWithSchema
           (uint *param_1,ulonglong *param_2,ushort *param_3,ulonglong *param_4,ulonglong param_5,
           uint *param_6,undefined4 *param_7,uint *param_8)
 
@@ -159,9 +159,9 @@ LAB_140fd4609:
         if (uVar16 == 0) goto LAB_140fd4a95;
         puVar11 = (ulonglong *)FUN_140fd6d70(param_6,uVar16);
         pIVar17 = (IMAGE_DOS_HEADER *)
-                  Msg_ParseAndDispatch_BuildArgs
-                            (*(uint **)(param_1 + 6),param_2,param_3,puVar11,
-                             (longlong)puVar11 + (ulonglong)uVar16,param_6,param_7,(uint *)0x0);
+                  ParseWithSchema(*(uint **)(param_1 + 6),param_2,param_3,puVar11,
+                                  (longlong)puVar11 + (ulonglong)uVar16,param_6,param_7,(uint *)0x0)
+        ;
         if (extraout_RAX == 0) {
           return (ulonglong *)pIVar17;
         }
@@ -180,9 +180,8 @@ LAB_140fd4609:
       if (param_1[4] != 0) {
         do {
           pIVar17 = (IMAGE_DOS_HEADER *)
-                    Msg_ParseAndDispatch_BuildArgs
-                              (*(uint **)(param_1 + 6),param_2,param_3,puVar11,uVar15,param_6,
-                               param_7,(uint *)0x0);
+                    ParseWithSchema(*(uint **)(param_1 + 6),param_2,param_3,puVar11,uVar15,param_6,
+                                    param_7,(uint *)0x0);
           if (extraout_RAX_00 == 0) {
             return (ulonglong *)pIVar17;
           }
@@ -212,9 +211,8 @@ LAB_140fd4738:
           if (uVar16 != 0) {
             do {
               pIVar17 = (IMAGE_DOS_HEADER *)
-                        Msg_ParseAndDispatch_BuildArgs
-                                  (*(uint **)(param_1 + 6),param_2,param_3,puVar11,
-                                   (ulonglong)local_38[0],param_6,param_7,(uint *)0x0);
+                        ParseWithSchema(*(uint **)(param_1 + 6),param_2,param_3,puVar11,
+                                        (ulonglong)local_38[0],param_6,param_7,(uint *)0x0);
               if (extraout_RAX_01 == 0) {
                 return (ulonglong *)pIVar17;
               }
@@ -247,9 +245,8 @@ LAB_140fd47ec:
           if (uVar16 != 0) {
             do {
               pIVar17 = (IMAGE_DOS_HEADER *)
-                        Msg_ParseAndDispatch_BuildArgs
-                                  (*(uint **)(param_1 + 6),param_2,param_3,puVar11,
-                                   (ulonglong)local_38[0],param_6,param_7,(uint *)0x0);
+                        ParseWithSchema(*(uint **)(param_1 + 6),param_2,param_3,puVar11,
+                                        (ulonglong)local_38[0],param_6,param_7,(uint *)0x0);
               if (extraout_RAX_02 == 0) {
                 return (ulonglong *)pIVar17;
               }

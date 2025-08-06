@@ -1,5 +1,5 @@
-
-void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *param_3)
+// [OLD_NAME]: Gs2c_PostParseDispatcher
+void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param_3)
 
 {
   byte bVar1;
@@ -43,7 +43,7 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
   local_48 = DAT_142551900 ^ (ulonglong)auStackY_b8;
   switch(*param_3) {
   case 0x2b:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142512470,param_3[2],
                         (ulonglong)(param_3 + 4));
     lVar15 = FUN_1409a4490();
@@ -52,14 +52,14 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
     FUN_1402510e0((undefined4 *)(*(longlong *)(lVar15 + 0x1f0) + 0x88),&LAB_1402536b8,
                   (undefined4 *)(lVar16 + 4),(undefined4 *)&local_68);
   case 0x2c:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142512560,param_3[2],
                         (ulonglong)(param_3 + 4));
     FUN_140260250(param_1,lVar16);
     break;
   case 0x2d:
     puVar30 = param_3 + 4;
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_1425126d0,param_3[2],
                         (ulonglong)puVar30);
     puVar27 = *(ushort **)(lVar16 + 0x12);
@@ -101,7 +101,7 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
     }
     break;
   case 0x2e:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142512810,param_3[2],
                         (ulonglong)(param_3 + 4));
     lVar15 = FUN_1402584f0(param_1,(undefined8 *)(lVar16 + 0x1a),*(ushort **)(lVar16 + 0x2a));
@@ -115,19 +115,19 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
   case 0x2f:
     uVar18 = (ulonglong)(uint)param_3[2];
     puVar30 = param_3 + 4;
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_1425129a0,param_3[2],
                         (ulonglong)puVar30);
     FUN_1402605f0(param_1,lVar16,uVar18,puVar30);
     break;
   case 0x30:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142512ae0,param_3[2],
                         (ulonglong)(param_3 + 4));
     FUN_140260430(param_1,lVar16);
     break;
   case 0x31:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_14256c6f0,param_3[0x44],
                         (ulonglong)(param_3 + 0x45));
     lVar15 = FUN_1402579b0(param_1,(ushort *)(param_3 + 4));
@@ -137,13 +137,13 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
     break;
   case 0x32:
     puVar30 = param_3 + 0x45;
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142511a70,param_3[0x44],
                         (ulonglong)puVar30);
     FUN_14025f130(param_1,(ushort *)(param_3 + 4),lVar16,puVar30);
     break;
   case 0x33:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142512e70,param_3[0x44],
                         (ulonglong)(param_3 + 0x45));
     plVar13 = (longlong *)FUN_1402579b0(param_1,(ushort *)(param_3 + 4));
@@ -163,7 +163,7 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
     }
     break;
   case 0x34:
-    lVar15 = Msg_BuildArgs_FromSchema
+    lVar15 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142512210,param_3[0x44],
                         (ulonglong)(param_3 + 0x45));
     lVar16 = *(longlong *)(lVar15 + 0x12);
@@ -185,7 +185,7 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
     }
     break;
   case 0x35:
-    lVar15 = Msg_BuildArgs_FromSchema
+    lVar15 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142512ef0,param_3[2],
                         (ulonglong)(param_3 + 4));
     lVar16 = FUN_1409a4490();
@@ -216,7 +216,7 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
     }
     break;
   case 0x36:
-    lVar15 = Msg_BuildArgs_FromSchema
+    lVar15 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513080,param_3[2],
                         (ulonglong)(param_3 + 4));
     lVar16 = FUN_1409a4490();
@@ -228,7 +228,7 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
     }
     break;
   case 0x37:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_14256c6f0,param_3[8],
                         (ulonglong)(param_3 + 9));
     if (lVar16 == 0) {
@@ -272,7 +272,7 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
     uVar18 = (ulonglong)(uint)param_3[8];
     puVar30 = param_3 + 9;
     puVar24 = &DAT_142513fa0;
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513fa0,param_3[8],
                         (ulonglong)puVar30);
     FUN_1402691e0((uint)*(byte *)(lVar16 + 10),puVar24,uVar18,puVar30);
@@ -312,13 +312,13 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
     break;
   case 0x3b:
     pplVar29 = (longlong **)(param_3 + 9);
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142514160,param_3[8],
                         (ulonglong)pplVar29);
     FUN_14025f8d0(param_1,(ulonglong *)(param_3 + 4),lVar16,pplVar29);
     break;
   case 0x3c:
-    lVar15 = Msg_BuildArgs_FromSchema
+    lVar15 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142512210,param_3[8],
                         (ulonglong)(param_3 + 9));
     lVar16 = *(longlong *)(lVar15 + 0x12);
@@ -340,7 +340,7 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
     }
     break;
   case 0x3d:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_1425140e0,param_3[8],
                         (ulonglong)(param_3 + 9));
     lVar15 = FUN_140257bc0(param_1 + 0x90,(ulonglong *)(param_3 + 4));
@@ -413,7 +413,7 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
     }
     break;
   case 0x3f:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142511600,param_3[2],
                         (ulonglong)(param_3 + 4));
     local_60 = (longlong *)0x0;
@@ -427,7 +427,7 @@ void Gs2c_PostParseDispatcher(longlong param_1,longlong param_2,undefined4 *para
     iVar17 = 1;
     goto LAB_14025e618;
   case 0x40:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142511860,param_3[2],
                         (ulonglong)(param_3 + 4));
     local_60 = (longlong *)0x0;
@@ -450,14 +450,14 @@ LAB_14025e618:
     **(undefined4 **)(param_2 + 0x18) = 1;
     break;
   case 0x42:
-    uVar14 = Msg_BuildArgs_FromSchema
+    uVar14 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513400,param_3[2],
                         (ulonglong)(param_3 + 4));
     lVar16 = FUN_1409a4490();
                     /* WARNING: Subroutine does not return */
     FUN_140250a10((undefined4 *)(*(longlong *)(lVar16 + 0x1f0) + 0x88),&LAB_1402536e8,uVar14);
   case 0x43:
-    uVar14 = Msg_BuildArgs_FromSchema
+    uVar14 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513570,param_3[2],
                         (ulonglong)(param_3 + 4));
     lVar16 = FUN_1409a4490();
@@ -466,7 +466,7 @@ LAB_14025e618:
   case 0x44:
     uVar18 = (ulonglong)(uint)param_3[2];
     puVar30 = param_3 + 4;
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513c50,param_3[2],
                         (ulonglong)puVar30);
     puVar23 = (ulonglong *)(lVar16 + 2);
@@ -500,7 +500,7 @@ LAB_14025e618:
     FUN_14025ccc0((longlong)(plVar13 + 1),lVar15,lVar11);
     break;
   case 0x45:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513d70,param_3[2],
                         (ulonglong)(param_3 + 4));
     lVar15 = Table_GetOrFindByKey(param_1 + 0x128,(ulonglong *)(lVar16 + 0x16));
@@ -523,7 +523,7 @@ LAB_14025e618:
     FUN_140ffc0a0(lVar15 + 0x48,*(longlong *)(lVar16 + 0x26));
     break;
   case 0x46:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513bb0,param_3[2],
                         (ulonglong)(param_3 + 4));
     lVar15 = Table_GetOrFindByKey(param_1 + 0x128,(ulonglong *)(lVar16 + 2));
@@ -561,7 +561,7 @@ LAB_14025e618:
     }
     break;
   case 0x47:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513e60,param_3[2],
                         (ulonglong)(param_3 + 4));
     plVar13 = (longlong *)Table_GetOrFindByKey(param_1 + 0x128,(ulonglong *)(lVar16 + 2));
@@ -589,11 +589,11 @@ LAB_14025e618:
     uVar18 = FUN_140277800((longlong)plVar13,(longlong *)0x0);
     if ((int)uVar18 != 0) {
                     /* WARNING: Subroutine does not return */
-      _guard_check_icall();
+      _guard_check_icall(plVar13);
     }
     break;
   case 0x48:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513a10,param_3[2],
                         (ulonglong)(param_3 + 4));
     FUN_14025fc00(param_1,lVar16);
@@ -602,7 +602,7 @@ LAB_14025e618:
     uVar18 = (ulonglong)(uint)param_3[2];
     puVar30 = param_3 + 4;
     puVar24 = &DAT_1425136e0;
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_1425136e0,param_3[2],
                         (ulonglong)puVar30);
     puVar27 = *(ushort **)(lVar16 + 2);
@@ -617,7 +617,7 @@ LAB_14025e618:
     }
     break;
   case 0x4a:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_1425137d0,param_3[2],
                         (ulonglong)(param_3 + 4));
     plVar13 = (longlong *)FUN_140257a90(param_1 + 0xe0,(ulonglong *)(lVar16 + 2));
@@ -632,14 +632,14 @@ LAB_14025e618:
     }
     break;
   case 0x4b:
-    uVar14 = Msg_BuildArgs_FromSchema
+    uVar14 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513360,param_3[2],
                         (ulonglong)(param_3 + 4));
     lVar16 = FUN_1409a4490();
                     /* WARNING: Subroutine does not return */
     FUN_140250a10((undefined4 *)(*(longlong *)(lVar16 + 0x1f0) + 0x88),&LAB_140253684,uVar14);
   case 0x4c:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513f00,param_3[2],
                         (ulonglong)(param_3 + 4));
     lVar15 = FUN_140257a90(param_1 + 0x1d8,(ulonglong *)(lVar16 + 2));
@@ -654,7 +654,7 @@ LAB_14025e618:
     }
     break;
   case 0x4e:
-    lVar16 = Msg_BuildArgs_FromSchema
+    lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_1425142a0,param_3[2],
                         (ulonglong)(param_3 + 4));
     if (lVar16 == 0) {
