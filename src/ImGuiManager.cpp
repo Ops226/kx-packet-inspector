@@ -25,6 +25,11 @@
 #include <windows.h> // Required for ShellExecuteA
 #include <algorithm>
 
+// Initialize static members
+int ImGuiManager::m_selectedPacketLogIndex = -1;
+std::string ImGuiManager::m_parsedPayloadBuffer = "";
+std::string ImGuiManager::m_fullLogEntryBuffer = "";
+
 bool ImGuiManager::Initialize(ID3D11Device* device, ID3D11DeviceContext* context, HWND hwnd) {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -126,8 +131,8 @@ void ImGuiManager::RenderStatusControlsSection() {
          switch (kx::g_msgRecvHookStatus) {
             case kx::HookStatus::OK:       msgRecvStatusStr = "OK"; break;
             case kx::HookStatus::Failed:   msgRecvStatusStr = "Failed"; break;
-            case kx::HookStatus::Unknown:
-            default:                       msgRecvStatusStr = "Not Found/Hooked"; break;
+            case kx::HookStatus::Unknown:  msgRecvStatusStr = "Not Found/Hooked"; break;
+            default:                       msgRecvStatusStr = "Unknown Status"; break;
         }
         ImGui::Text("MsgRecv Hook: %s", msgRecvStatusStr);
 
@@ -237,9 +242,9 @@ void ImGuiManager::RenderFilteringSection() {
 }
 
 // Helper function to render a single row in the packet log
-void ImGuiManager::RenderSinglePacketLogRow(const kx::PacketInfo& packet, int display_index) {
+void ImGuiManager::RenderSinglePacketLogRow(const kx::PacketInfo& packet, int display_index, int original_log_index) {
     std::string displayLogEntry = kx::Utils::FormatDisplayLogEntryString(packet);
-    auto parsedDataStr = kx::Parsing::GetParsedDataTooltipString(packet);
+    // auto parsedDataStr = kx::Parsing::GetParsedDataTooltipString(packet); // Tooltip removed
 
     ImGui::PushID(display_index);
 
@@ -253,24 +258,26 @@ void ImGuiManager::RenderSinglePacketLogRow(const kx::PacketInfo& packet, int di
     ImGui::PushStyleColor(ImGuiCol_Text, textColor);
     // --- End Color Coding ---
 
-    // Calculate width needed for the copy button to make the input text fill remaining space
-    float buttonWidth = ImGui::CalcTextSize("Copy").x + ImGui::GetStyle().FramePadding.x * 2.0f + ImGui::GetStyle().ItemSpacing.x;
-    ImGui::PushItemWidth(-buttonWidth); // Negative width means fill available space minus button width
-    ImGui::InputText("##Pkt", (char*)displayLogEntry.c_str(), displayLogEntry.size() + 1, ImGuiInputTextFlags_ReadOnly);
-    ImGui::PopItemWidth();
+    // Use Selectable instead of InputText
+    bool is_selected = (m_selectedPacketLogIndex == original_log_index);
+    if (ImGui::Selectable(displayLogEntry.c_str(), is_selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+        m_selectedPacketLogIndex = original_log_index;
+        // Clear buffer to force re-parsing when a new packet is selected
+        m_parsedPayloadBuffer.clear();
+        m_fullLogEntryBuffer.clear(); // Clear full log entry buffer
+    }
     ImGui::PopStyleColor(); // Pop text color style
 
-    // --- Tooltip for Parsed Data ---
-    if (ImGui::IsItemHovered() && parsedDataStr.has_value()) {
-        ImGui::BeginTooltip();
-        ImGui::TextUnformatted(parsedDataStr->c_str()); // Display the pre-formatted string
-        ImGui::EndTooltip();
-    }
+    // --- Tooltip for Parsed Data --- (Removed)
+    // if (ImGui::IsItemHovered() && parsedDataStr.has_value()) {
+    //     ImGui::BeginTooltip();
+    //     ImGui::TextUnformatted(parsedDataStr->c_str()); // Display the pre-formatted string
+    //     ImGui::EndTooltip();
+    // }
     // --- End Tooltip ---
 
-    ImGui::SameLine();
-
     // Copy button: generate and copy full log entry string on click.
+    ImGui::SameLine(ImGui::GetWindowWidth() - ImGui::CalcTextSize("Copy").x - ImGui::GetStyle().FramePadding.x * 2.0f - ImGui::GetStyle().ScrollbarSize); // Align to right
     if (ImGui::SmallButton("Copy")) {
         std::string fullLogEntry = kx::Utils::FormatFullLogEntryString(packet);
         ImGui::SetClipboardText(fullLogEntry.c_str());
@@ -280,9 +287,10 @@ void ImGuiManager::RenderSinglePacketLogRow(const kx::PacketInfo& packet, int di
 }
 
 // Acquires lock, filters packets, and returns a snapshot for rendering.
-std::vector<kx::PacketInfo> ImGuiManager::GetFilteredPacketsSnapshot(size_t& out_total_packets) {
+std::vector<kx::PacketInfo> ImGuiManager::GetFilteredPacketsSnapshot(size_t& out_total_packets, std::vector<int>& out_original_indices) {
     std::vector<kx::PacketInfo> packets_to_render;
     out_total_packets = 0;
+    out_original_indices.clear();
     {
         // Lock scope for accessing global log and creating copy
         std::lock_guard<std::mutex> lock(kx::g_packetLogMutex);
@@ -290,13 +298,15 @@ std::vector<kx::PacketInfo> ImGuiManager::GetFilteredPacketsSnapshot(size_t& out
         std::vector<int> filtered_indices = kx::Filtering::GetFilteredPacketIndices(kx::g_packetLog);
 
         packets_to_render.reserve(filtered_indices.size());
+        out_original_indices.reserve(filtered_indices.size());
         for (int index : filtered_indices) {
             // Double-check index validity against the *current* size under lock
             if (index >= 0 && static_cast<size_t>(index) < kx::g_packetLog.size()) {
                 packets_to_render.push_back(kx::g_packetLog[index]);
+                out_original_indices.push_back(index);
             }
         }
-    } // Mutex released here
+    }
     return packets_to_render;
 }
 
@@ -315,6 +325,9 @@ void ImGuiManager::RenderPacketLogControls(size_t displayed_count, size_t total_
     if (ImGui::Button("Clear Log")) {
         std::lock_guard<std::mutex> lock(kx::g_packetLogMutex);
         kx::g_packetLog.clear();
+        m_selectedPacketLogIndex = -1; // Reset selected index
+        m_parsedPayloadBuffer.clear(); // Clear parsed buffer
+        m_fullLogEntryBuffer.clear(); // Clear full log entry buffer
     }
 
     ImGui::PopStyleColor(3); // Restore default button colors
@@ -335,7 +348,7 @@ void ImGuiManager::RenderPacketLogControls(size_t displayed_count, size_t total_
 }
 
 // Renders the list of packets using ImGuiListClipper for efficiency.
-void ImGuiManager::RenderPacketListWithClipping(const std::vector<kx::PacketInfo>& packets_to_render) {
+void ImGuiManager::RenderPacketListWithClipping(const std::vector<kx::PacketInfo>& packets_to_render, const std::vector<int>& original_indices_snapshot) {
     // Use clipper only if there are items to display in our copy
     if (!packets_to_render.empty())
     {
@@ -347,7 +360,7 @@ void ImGuiManager::RenderPacketListWithClipping(const std::vector<kx::PacketInfo
 			for (int display_index = clipper.DisplayStart; display_index < clipper.DisplayEnd; ++display_index)
 			{
 				// Call the helper function to render the row
-				RenderSinglePacketLogRow(packets_to_render[display_index], display_index);
+				RenderSinglePacketLogRow(packets_to_render[display_index], display_index, original_indices_snapshot[display_index]);
 			}
 		}
         clipper.End();
@@ -357,7 +370,8 @@ void ImGuiManager::RenderPacketListWithClipping(const std::vector<kx::PacketInfo
 void ImGuiManager::RenderPacketLogSection() {
     // 1. Get packet data snapshot
     size_t total_packets = 0;
-    std::vector<kx::PacketInfo> packets_to_render = GetFilteredPacketsSnapshot(total_packets);
+    std::vector<int> original_indices_snapshot;
+    std::vector<kx::PacketInfo> packets_to_render = GetFilteredPacketsSnapshot(total_packets, original_indices_snapshot);
 
     // 2. Display statistics
     ImGui::Text("Packet Log (Showing: %zu / Total: %zu)", packets_to_render.size(), total_packets);
@@ -368,10 +382,18 @@ void ImGuiManager::RenderPacketLogSection() {
     ImGui::Spacing();
 
     // 4. Render scrolling list region
-    ImGui::BeginChild("PacketLogScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
+    float available_height = ImGui::GetContentRegionAvail().y;
+    float log_section_height = available_height * 0.65f; // Allocate 65% of available height to log
+
+    // Ensure a minimum height for the log section
+    if (log_section_height < ImGui::GetTextLineHeight() * 10) { // Minimum 10 lines
+        log_section_height = ImGui::GetTextLineHeight() * 10;
+    }
+
+    ImGui::BeginChild("PacketLogScrollingRegion", ImVec2(0, log_section_height), true, ImGuiWindowFlags_HorizontalScrollbar);
 
     // 5. Render packet list using clipper
-    RenderPacketListWithClipping(packets_to_render);
+    RenderPacketListWithClipping(packets_to_render, original_indices_snapshot);
 
     // 6. Handle auto-scrolling
     if (!packets_to_render.empty() && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
@@ -379,6 +401,50 @@ void ImGuiManager::RenderPacketLogSection() {
     }
 
     ImGui::EndChild();
+}
+
+void ImGuiManager::RenderSelectedPacketDetailsSection() {
+    if (ImGui::CollapsingHeader("Selected Packet Details", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (m_selectedPacketLogIndex != -1) {
+            std::lock_guard<std::mutex> lock(kx::g_packetLogMutex);
+            if (m_selectedPacketLogIndex >= 0 && m_selectedPacketLogIndex < kx::g_packetLog.size()) {
+                const kx::PacketInfo& selectedPacket = kx::g_packetLog[m_selectedPacketLogIndex];
+
+                // Only re-parse if the buffer is empty (first time selected or cleared)
+                // or if the selected packet has changed (though m_selectedPacketLogIndex handles this)
+                if (m_parsedPayloadBuffer.empty() || m_fullLogEntryBuffer.empty()) { // Check both buffers
+                    m_fullLogEntryBuffer = kx::Utils::FormatFullLogEntryString(selectedPacket); // Populate full log entry
+                    auto parsedDataOpt = kx::Parsing::GetParsedDataTooltipString(selectedPacket);
+                    if (parsedDataOpt.has_value()) {
+                        m_parsedPayloadBuffer = parsedDataOpt.value();
+                    } else {
+                        m_parsedPayloadBuffer = "No specific parser available for this packet type.";
+                    }
+                }
+
+                ImGui::Text("Full Log Entry:");
+                ImGui::InputTextMultiline("##FullLogEntry", (char*)m_fullLogEntryBuffer.c_str(), m_fullLogEntryBuffer.size() + 1, ImVec2(-1, ImGui::GetTextLineHeight() * 3), ImGuiInputTextFlags_ReadOnly);
+
+                ImGui::Text("Parsed Payload:");
+                ImGui::InputTextMultiline("##ParsedPayload", (char*)m_parsedPayloadBuffer.c_str(), m_parsedPayloadBuffer.size() + 1, ImVec2(-1, ImGui::GetTextLineHeight() * 10), ImGuiInputTextFlags_ReadOnly);
+
+                if (ImGui::Button("Copy All Details")) {
+                    std::stringstream ss;
+                    ss << "Full Log Entry:\n" << m_fullLogEntryBuffer << "\n\n";
+                    ss << "Parsed Payload:\n" << m_parsedPayloadBuffer;
+                    ImGui::SetClipboardText(ss.str().c_str());
+                }
+
+            } else {
+                m_selectedPacketLogIndex = -1; // Invalid index, reset
+                m_parsedPayloadBuffer.clear();
+                m_fullLogEntryBuffer.clear(); // Clear full log entry buffer
+                ImGui::Text("Selected packet no longer exists (e.g., log cleared).");
+            }
+        } else {
+            ImGui::Text("Select a packet from the log above to view its parsed details here.");
+        }
+    }
 }
 
 
@@ -402,6 +468,7 @@ void ImGuiManager::RenderPacketInspectorWindow() {
     RenderStatusControlsSection();
     RenderFilteringSection();
     RenderPacketLogSection();
+    RenderSelectedPacketDetailsSection(); // Add this call
 
     ImGui::End();
 }
