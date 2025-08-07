@@ -1,100 +1,117 @@
 # System Architecture: Network Message Processing
 
-**Status:** Confirmed (Dynamic Analysis Backed & Unified)
+**Status:** Confirmed (Validated Multi-Protocol Architecture, In-Depth Client-Side Analysis)
 
-## High-Level Model
+## High-Level Model: The Three-Server Architecture
 
-The Guild Wars 2 client processes network messages through a **dynamic, multi-stage dispatch system** for both incoming (SMSG) and outgoing (CMSG) traffic. This architecture leverages runtime-resolved function pointers and schema-driven serialization/deserialization.
+The Guild Wars 2 client does not connect to a single monolithic server. Instead, it maintains simultaneous, specialized connections to at least **three distinct backend server systems**, each handling specific functionalities with its own dedicated protocol. This robust architecture ensures functional separation, optimizes traffic, and enhances security.
 
-The unified process is as follows:
+The three primary protocols and their corresponding server systems are:
 
-1.  **Incoming (SMSG) - Framing & Initial Processing:** All incoming game server traffic is handled by `Msg::DispatchStream`. This function reads the raw byte stream, identifies individual message frames, and prepares them for parsing.
-2.  **Incoming (SMSG) - Schema-Driven Parsing:** For each message, `Msg::DispatchStream` calls the schema virtual machine, `MsgUnpack::ParseWithSchema`. This function uses an opcode-specific schema to transform raw bytes into a structured data tuple.
-3.  **Incoming (SMSG) - Dynamic Handler Dispatch:** After parsing, `Msg::DispatchStream` retrieves a dynamically resolved function pointer (e.g., from `[[MsgConn+0x48]+0x18]`) and calls it, passing the parsed data tuple. There is **no single, master switch statement**; the handler can vary based on connection context or message content.
-4.  **Outgoing (CMSG) - Game Logic Initiates:** A high-level game logic function (e.g., character movement, skill usage) initiates the process by preparing data for a packet.
-5.  **Outgoing (CMSG) - Packet Building:** The game logic calls `MsgConn::BuildPacketFromSchema`, providing the packet's schema and the data to be serialized. This function internally uses `Msg::MsgPack` (the CMSG counterpart to the SMSG parser) to write the data into a packet buffer.
-6.  **Outgoing (CMSG) - Queueing for Send:** The completed packet is then passed to a queueing function (e.g., `MsgConn::QueuePacket`), which places it in a thread-safe queue to be sent by the network thread.
+1.  **Login Server (`ls2c`/`c2ls`):**
+    *   **Purpose:** Handles initial client authentication, account validation, and character selection. This connection is typically short-lived.
+    *   **Typical Port:** Often uses standard web ports (e.g., TCP 443) or specialized login ports.
+    *   **Lifecycle:** Established only during the initial client startup and character selection.
+    *   **Hand-off Mechanism:** Its final task is to provide the client with the specific network coordinates (IP address and port) of the Game Server and Platform Server to which it should connect for the gameplay session. This is often communicated via a `DispatchToGameServer` message.
 
-## Key Components
+2.  **Platform Server (`ps2c`/`c2ps`):**
+    *   **Purpose:** Manages all account-level services, social features, and commercial interactions. This includes character inventory/wallet, achievements, friends lists, guilds, LFG (Looking for Group), the Trading Post, and the Gem Store (Wizards Vault). This is the "Portal" system identified in client code.
+    *   **Client Component:** Managed by the client's `PortalCli` component, which likely initializes and manages its own secure socket (e.g., `Arena::Services::StsInetSocket`).
+    *   **Traffic Examples:** `REQ /Group/GroupInfo`, `/Presence/UserInfo`, `/Game.com.Wallet/WalletInfo`, `MailMsg`, `ChMsg` (Channel Message).
+    *   **Lifecycle:** Established after login and remains active in parallel with the Game Server connection throughout the gameplay session.
 
-### 1. The Server Message Dispatcher (`Msg::DispatchStream`) (see `raw_decompilations/smsg/Msg::DispatchStream.c`)
-*   **Role:** This is the primary orchestrator for incoming game server messages. It manages the message stream, calls the parser for each message, and executes the **currently assigned dynamic post-parse handler function**.
+3.  **Game Server (`gs2c`/`c2gs`):**
+    *   **Purpose:** Handles all real-time, in-world gameplay interactions. This encompasses high-frequency updates like player movement, combat events, skill usage, NPC/agent state synchronization, and dynamic map events.
+    *   **Client Component:** Primarily managed by the client's `MsgConn` component.
+    *   **Traffic Examples:** `SMSG_PLAYER_STATE_UPDATE`, `SMSG_AGENT_UPDATE_BATCH` (0x0001), `CMSG_MOVEMENT`, `CMSG_USE_SKILL`.
+    *   **Lifecycle:** Established after login and remains the core connection for gameplay throughout the session.
 
-### 2. The Schema-Driven Parser (`MsgUnpack::ParseWithSchema`) (see `raw_decompilations/common/MsgUnpack::ParseWithSchema.c`)
-*   **Role:** This function acts as a virtual machine that interprets a schema to parse a raw byte buffer into a typed argument tuple. Its role is central to understanding both incoming (SMSG) and outgoing (CMSG) packet structures.
-*   **Schema Typecodes:** The schema is defined by a series of typecodes. Key typecodes include:
-    *   `0x02`: `u8`
-    *   `0x0c`: Composite type (struct-like, inline fields)
-    *   `0x11`: Array with `u8` count.
-    *   `0x12`: Array with `u16` count.
-    *   `0x13`: Fixed-size byte array.
-    *   `0x14`: Byte array with `u8` length.
-    *   `0x15`: Byte array with `u16` length.
-    *   `0x16`: Untyped (raw bytes, for opaque payloads)
-    *   `0x17`: `u32`
+**Overall Connection Flow:**
+1.  Client initiates connection to Login Server (`c2ls`).
+2.  Authentication and character selection occur over the Login Server protocol.
+3.  Login Server sends connection details for Game and Platform Servers to the client.
+4.  Client disconnects from Login Server.
+5.  Client establishes simultaneous, persistent connections to both the Game Server (`c2gs`) and Platform Server (`c2ps`). These two connections run in parallel during gameplay.
 
-### 3. Dynamic Post-Parse Handlers (SMSG)
+## The Game Server Protocol (`gs2c`/`c2gs`) In-Depth
 
-*   **Role:** These are the functions that receive the structured data tuple from `MsgUnpack::ParseWithSchema`. The client dynamically loads which handler is active.
-*   **Discovery:** Identified by dynamic analysis (e.g., observing the `RAX` register at `"Gw2-64.exe"+FD1ACD` within `Msg::DispatchStream`).
-*   **Example:** `FUN_1413e5d90` (renamed `Marker::Cli::ProcessAgentMarkerUpdate`). This function handles packets whose parsed tuple begins with `0x03FE`.
-*   **`Gs2c_PostParseDispatcher` (see `raw_decompilations/smsg/Gs2c_PostParseDispatcher.c`):** This is understood to be **one of many possible dynamic post-parse handlers**. It is not the universal destination for all packets and handles a specific subset of application-level messages.
+This section provides a detailed analysis of the primary gameplay connection, which is the current focus of the KX Packet Inspector's hooking mechanisms. This protocol employs a highly dynamic, multi-stage dispatch and serialization system.
 
-### 4. Outgoing Packet Builder (`MsgConn::BuildPacketFromSchema`)
-*   **Function:** `FUN_140fd4c10` (Proposed Name: `MsgConn::BuildPacketFromSchema`)
-*   **Role:** This is the primary utility function for constructing outgoing packets. It takes a schema and raw data, then serializes the data into a buffer.
-*   **Internal Call:** It internally uses `FUN_140fd2c70` (Proposed Name: `Msg::MsgPack`) which acts as the CMSG-specific schema serialization engine.
+### Unified Process Flow (Game Server)
 
-### 5. Outgoing Packet Queueing (`MsgConn::QueuePacket`)
-*   **Role:** Takes a fully constructed packet buffer and its opcode, and places it into a thread-safe queue.
-*   **Internal Call:** It calls `FUN_141051690` (Proposed Name: `MsgConn::EnqueuePacket`) which performs the low-level queueing operations.
+The `gs2c`/`c2gs` communication pipeline is intricate, featuring both generic, schema-driven paths and highly optimized "Fast Paths" for high-frequency data.
 
-## Packet Flow Examples (Confirmed via Dynamic Analysis & Dual Paths)
+#### Incoming (SMSG) Packet Processing:
 
-### Incoming (SMSG) Example: Message with `FE 03` Prefix
+1.  **Framing & Initial Processing:** All incoming `gs2c` raw byte streams are managed by `Msg::DispatchStream`. This central function is responsible for:
+    *   Reading raw bytes from the network ring buffer.
+    *   Identifying individual message frames (packet boundaries).
+    *   Performing initial processing, including decryption (e.g., RC4) and decompression, to yield plaintext, framed messages.
+    *   It uses a `MsgConn` object (passed as `param_2` in assembly) for context and buffer management. Relevant offsets include: `MSGCONN_BUFFER_BASE_PTR_OFFSET (0x88)`, `MSGCONN_BUFFER_READ_IDX_OFFSET (0x94)`, `MSGCONN_BUFFER_WRITE_IDX_OFFSET (0xA0)`.
 
-The handling of a message whose parsed tuple begins with `FE 03` illustrates the dynamic incoming process:
+2.  **Dispatch Type Evaluation:** For each framed message, `Msg::DispatchStream` retrieves its `Handler Info` structure (from `MsgConn` at offset `0x48`, specifically `*(longlong *)(param_2 + 0x48)`). A key field in this structure is the "Dispatch Type" (at `HandlerInfo+0x10`). This type dictates the subsequent processing path:
+    *   **Dispatch Type `0` (Generic Path):** For most packets. Leads to schema-driven parsing and a handler that receives a parsed data tuple.
+    *   **Dispatch Type `1` (Fast Path):** For high-frequency packets like `SMSG_AGENT_UPDATE_BATCH` (0x0001). This path optimizes performance by bypassing the generic schema's output and relying on hardcoded processing.
 
-1.  **Dispatch:** `Msg::DispatchStream` receives the raw bytes for an unknown message.
-2.  **Parsing:** It calls `MsgUnpack::ParseWithSchema` (`call "Gw2-64.exe"+FD43C0`). The parser uses the appropriate schema and creates a data tuple (e.g., `FE 03 2F 01 ...`).
-3.  **Dynamic Handling:** `Msg::DispatchStream` retrieves a function pointer from its dispatch object (`mov rax,[rcx+18]`). In this live context, the pointer is the address of `FUN_1413e5d90` (`Marker::Cli::ProcessAgentMarkerUpdate`).
-4.  **Execution:** The dispatcher calls the pointer (`call rax` at `"Gw2-64.exe"+FD1ACD`). `Marker::Cli::ProcessAgentMarkerUpdate` then executes, reading fields from the data tuple to carry out its logic.
+3.  **Parsing & Data Extraction:**
+    *   **Generic Path (`MsgUnpack::ParseWithSchema`):** For Dispatch Type `0` packets, `Msg::DispatchStream` calls the schema virtual machine, `MsgUnpack::ParseWithSchema`. This function interprets an opcode-specific schema to transform raw bytes into a structured data tuple in a temporary buffer.
+    *   **Fast Path (Hardcoded Parsing):** For Dispatch Type `1` packets (e.g., 0x0001), `Msg::DispatchStream` does **not** rely on `MsgUnpack::ParseWithSchema` for the final payload structure. Instead, the raw payload data (still available in the network buffer) is manually read and processed by hardcoded logic directly within `Msg::DispatchStream`. This involves repeated calls to low-level buffer reading utilities like `FUN_140fd70a0` (e.g., `Arena::Core::Collections::Array`) to extract specific fields (e.g., floats for coordinates, integers for IDs).
 
-### Outgoing (CMSG) Pathways
+4.  **Handler Execution:**
+    *   **Generic Handler Dispatch:** For Dispatch Type `0` packets, `Msg::DispatchStream` calls the handler function pointer (from `HandlerInfo+0x18`), passing it the parsed data tuple. (Example: `Marker::Cli::ProcessAgentMarkerUpdate` for `FE 03` messages).
+    *   **Fast Path Notification:** For Dispatch Type `1` packets, after `Msg::DispatchStream` has completed its internal parsing and state updates, it calls a registered "notification" stub (e.g., `Event::PreHandler_Stub_0x88`) via `CALL RAX` (e.g., at `140fd1acd`). This stub receives only context arguments and its purpose is to trigger further, decoupled engine events (e.g., through `Event::Factory_QueueEvent`), rather than directly processing packet data.
 
-The client uses two distinct pathways for sending CMSG packets, optimized for different types of traffic:
+#### Outgoing (CMSG) Packet Processing:
 
-#### Pathway 1: The "Buffered" Stream (High-Frequency Data)
+1.  **Game Logic Initiates:** High-level game logic (e.g., player movement, skill usage, inventory actions) prepares raw data for an outgoing packet.
+2.  **Packet Building (`MsgConn::BuildPacketFromSchema`):** The game logic calls `MsgConn::BuildPacketFromSchema` (proposed name for `FUN_140fd4c10`). This is the primary utility for constructing outgoing packets. It takes a schema definition and raw data, then orchestrates the serialization.
+3.  **Serialization (`Msg::MsgPack`):** `MsgConn::BuildPacketFromSchema` internally uses `Msg::MsgPack` (proposed name for `FUN_140fd2c70`), which acts as a schema-driven "virtual machine" to write the data into a packet buffer according to the schema's typecodes.
+4.  **Queueing & Sending:** The completed packet is then placed into a thread-safe outgoing queue:
+    *   **Direct Queue (`MsgConn::QueuePacket`):** For discrete, high-priority events (e.g., heartbeats `0x0005`, agent links `0x0036`), packets are passed directly to `MsgConn::QueuePacket` (`FUN_14104d760`), which in turn calls `MsgConn::EnqueuePacket` (`FUN_141051690`) for low-level queueing.
+    *   **Buffered Stream (`MsgConn::FlushPacketBuffer`):** For continuous, high-frequency, or aggregated data (e.g., movement `0x0012`), data is initially written into a common buffer using `MsgConn::WriteToPacketBuffer`. This buffer is periodically flushed by `MsgConn::FlushPacketBuffer` (`FUN_140fd1e80`), which then processes the accumulated data, performing serialization and queueing. The `MsgSendContext` structure (defined in `GameStructs.h`) is critical for accessing buffer state and pointers during this process.
 
-This pathway is used for continuous, high-frequency, or aggregated data such as **player movement (0x0004, 0x0012, 0x000B), skill usage (0x0017), or mount movement (0x0018)**. Data is written into a buffer, which is periodically flushed.
+### Key Components of the Game Server Connection
 
-1.  **Game Logic:** High-frequency game logic directly calls `MsgConn::WriteToPacketBuffer` to append data.
-2.  **Buffering:** `MsgConn::WriteToPacketBuffer` writes bytes into a common packet buffer managed by `MsgConn`.
-3.  **Flushing:** When the buffer is full, a logical packet is complete, or a timer expires, `MsgConn::FlushPacketBuffer` is called. This function prepares the buffered data for the next stage.
-4.  **Serialization & Sending:** The actual serialization and sending logic (likely `Msg::MsgPack` and `MsgConn::QueuePacket`) occurs within the `MsgConn::FlushPacketBuffer`'s downstream calls, processing the accumulated buffer.
+*   **`Msg::DispatchStream`:** (Primary Incoming Orchestrator, `Gw2-64.exe` offset `0xFD18CC`). Manages incoming message stream, handles framing/decryption, and performs dynamic dispatch based on "Dispatch Type" (from `HandlerInfo+0x10`). Contains hardcoded Fast Path parsing.
+*   **`MsgUnpack::ParseWithSchema`:** (Generic Schema Parser, `Gw2-64.exe` offset `0xFD43C0`). Interprets bytecode-like schemas to convert raw bytes to structured data tuples.
+    *   **Schema Typecodes:** `0x02` (u8), `0x0c` (composite), `0x11` (u8-counted array), `0x12` (u16-counted array), `0x13` (fixed byte array), `0x14` (u8-len byte array), `0x15` (u16-len byte array), `0x17` (u32).
+*   **`MsgConn::BuildPacketFromSchema`:** (Outgoing Packet Builder, proposed name for `FUN_140fd4c10`). High-level utility to prepare CMSG packets from schemas and data.
+*   **`Msg::MsgPack`:** (Schema Serialization Engine, proposed name for `FUN_140fd2c70`). Internal function called by `MsgConn::BuildPacketFromSchema` to write data to buffers according to schema.
+*   **`MsgConn` Object Context:** (`param_2` in `Msg::DispatchStream`, `param_1` in `MsgSendHook::hookMsgSend`). A central object for managing network state, buffers, and handlers. Key offsets include:
+    *   `MSGCONN_HANDLER_INFO_PTR_OFFSET` (0x48): Pointer to the current message's `Handler Info` structure.
+    *   `MSGCONN_BUFFER_BASE_PTR_OFFSET` (0x88): Base pointer of the raw network ring buffer.
+    *   `MSGCONN_BUFFER_READ_IDX_OFFSET` (0x94): Current read position in the ring buffer.
+    *   `MSGCONN_BUFFER_WRITE_IDX_OFFSET` (0xA0): Current write position in the ring buffer.
+*   **`Handler Info` Structure:** (Obtained from `MsgConn+0x48`). A 32-byte structure defining how a message is handled. Key offsets:
+    *   `HANDLER_INFO_MSG_ID_OFFSET` (0x00): The packet's opcode (e.g., `0x0001`).
+    *   `HANDLER_INFO_MSG_DEF_PTR_OFFSET` (0x08): Pointer to the `Message Definition` structure.
+    *   `HANDLER_INFO_DISPATCH_TYPE_OFFSET` (0x10): The "Dispatch Type" (`0` for Generic, `1` for Fast Path).
+    *   `HANDLER_INFO_HANDLER_FUNC_PTR_OFFSET` (0x18): Pointer to the handler function/notification stub.
+*   **`Message Definition` Structure:** (Obtained from `HandlerInfo+0x08`). Defines message properties. Key offset:
+    *   `MSG_DEF_SIZE_OFFSET` (0x20): The size of the message payload.
+*   **`FUN_140fd70a0` (e.g., `Arena::Core::Collections::Array`):** (Ring Buffer Reader). A core utility function used to extract bytes from circular buffers in `Msg::DispatchStream`.
 
-#### Pathway 2: The "Direct Queue" (Discrete, High-Priority Events)
+## The Platform Server Protocol (`ps2c`/`c2ps`) (The "Portal" System)
 
-This pathway is used for single, discrete events that need to be sent immediately (e.g., **heartbeats (0x0005), agent links (0x0036)).
+This connection operates in parallel to the Game Server connection and handles all non-real-time, account-specific interactions.
 
-1.  **Game Logic:** Game logic (e.g., `CMSG::BuildAgentLink`) prepares the data for a specific, single packet.
-2.  **Packet Building:** It calls `MsgConn::BuildPacketFromSchema` (`FUN_140fd4c10`), providing the schema and raw data.
-3.  **Direct Queueing:** The constructed packet is then directly passed to `MsgConn::QueuePacket` (`FUN_14104d760`) along with its opcode.
-4.  **Sending:** `MsgConn::QueuePacket` (which calls `MsgConn::EnqueuePacket`) places the packet directly into the thread-safe send queue.
+*   **Client Components:**
+    *   **`Gw2::Services::PortalCli::PortalCli`:** (Constructor). Initializes the connection, resolving the server via the DNS name `"cligate"`.
+    *   **`Gw2::Services::PortalCli::PortalCliAuth`:** Handles authentication with the Portal backend, involving secure socket creation (`Arena::Services::StsInetSocket`).
+    *   **`Gw2::Game::Net::Cli::GcPortal`:** Acts as a router. For certain commands (e.g., `param_2 == 7`), it redirects processing to the `PortalCli` system, bypassing the standard `MsgConn` Game Server queue. This is where requests like `REQ /Group/GroupInfo` or `REQ /Game.com.Wallet/WalletInfo` are initiated.
+*   **Traffic Characteristics:** Often involves HTTP-like requests (`REQ`) and responses (`RESP`), handling structured data for UI elements like leaderboards, wallet info, and social graphs.
 
-**Example: Agent Link (`0x0036`)**
+## The Login Server Protocol (`ls2c`/`c2ls`)
 
-`CMSG::BuildAgentLink` uses Pathway 2. It calls `MsgConn::BuildPacketFromSchema`, then `MsgConn::QueuePacket` (which calls `MsgConn::EnqueuePacket`).
+This is a transient connection serving the initial client lifecycle.
 
-**Example: Heartbeat (`0x0005`)**
-
-The constant `0x0005` heartbeat uses Pathway 2. It directly calls `MsgConn::QueuePacket` with its opcode and an empty payload.
+*   **Client Components:** Handles modules related to `LoginStatus`, `SelectCharacter`, `PlayInfo`, and `MapInfo`.
+*   **Role:** Facilitates user authentication against account credentials, character selection, and initial game world assignment.
+*   **Hand-off:** Crucially, it provides the client with the necessary connection details (IP address, port) to connect to the specific Game Server and Platform Server, enabling the client to disconnect from the Login Server and establish the persistent gameplay connections.
 
 ## Implications for Reverse Engineering
 
-*   **Dynamic Analysis is Required for Handlers:** Static analysis alone is insufficient. The only reliable way to find the correct SMSG handler for a specific packet is to use a debugger (like Cheat Engine) to trace execution and identify which post-parse function is actually called.
-*   **CMSG Discovery is Dual-Path:** CMSG packets must be discovered by observing both the "Buffered" and "Direct Queue" pathways to get full coverage.
-*   **The Schema is Still King:** For both SMSG and CMSG, the schema remains the authoritative source for the packet's on-wire structure. However, discovering which schema applies to a given packet requires tracing.
-*   **The System is Highly Context-Driven:** The client's ability to dynamically swap handlers and build packets via centralized logic means the meaning and processing of packets can change depending on the game's state.
-
----
+*   **Multi-Protocol Hooking:** A complete packet capture requires hooking not only the `MsgConn` functions (for `gs2c`/`c2gs` traffic) but also the send/receive methods of the `StsInetSocket` used by the `PortalCli` component (for `ps2c`/`c2ps` traffic) and potentially the ephemeral Login Server connection.
+*   **Layered Packet Processing:** `Msg::DispatchStream`'s "Fast Path" for high-frequency packets like `0x0001` means their payload structures are hardcoded and need direct analysis of the `Msg::DispatchStream` function itself, rather than relying on `MsgUnpack::ParseWithSchema`.
+*   **Context is King:** The behavior and meaning of data are heavily dependent on the specific protocol (Game, Platform, Login) and the internal "Dispatch Type" used within `Msg::DispatchStream`.
+*   **Function Naming:** As demonstrated, leveraging strings from assertions (e.g., `D:\Perforce\...`) and known API patterns is incredibly effective for recovering meaningful function names (`PortalCli`, `Arena::Core::Collections::Array`, `Gw2::Services::Msg::MsgUtil`), which then clarify architectural roles.
