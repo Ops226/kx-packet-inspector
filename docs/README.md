@@ -4,22 +4,24 @@ Welcome to the official documentation for the KX Packet Inspector project.
 
 This repository aims to provide a powerful tool for understanding and analyzing network communication in Guild Wars 2. This documentation serves as a central hub for all reverse engineering findings, methodologies, and technical insights gained during the development of this tool.
 
-## Documentation Structure
+## Core Documentation
 
-*   **[System Architecture](./system-architecture.md):** A high-level overview of the entire network message dispatch system, covering both incoming (SMSG) and outgoing (CMSG) packets.
-*   **[Packets](./packets):** Detailed, evidence-backed analysis of specific packet families and their variants. This section now includes both [Server-to-Client (SMSG) packets](./packets/smsg/README.md) and [Client-to-Server (CMSG) packets](./packets/cmsg/README.md).
-*   **[Methodologies](./methodologies):** Guides and playbooks for reverse engineering the game client. This now includes separate playbooks for [SMSG Packet Discovery](./methodologies/smsg-parser-discovery-playbook.md) and [CMSG Packet Discovery](./methodologies/cmsg-parser-discovery-playbook.md).
-*   **[Raw Decompilations](./raw_decompilations):** Organized raw decompiled code snippets used as evidence for the architectural descriptions.
+*   **[System Architecture](./system-architecture.md):** A high-level overview of the entire network message processing system, covering the three-server architecture (Login, Platform, Game) and detailing both incoming (SMSG) and outgoing (CMSG) packet pipelines.
 
-## Getting Started
+*   **[Packets](./packets/README.md):** Detailed, evidence-backed analysis of specific packet families and their variants. This section is the primary reference for all reverse-engineered network messages.
+    *   **[Server-to-Client (SMSG) Packets](./packets/smsg/README.md)**
+    *   **[Client-to-Server (CMSG) Packets](./packets/cmsg/README.md)**
 
-*   To understand the overall network architecture, start with **[System Architecture](./system-architecture.md)**.
-*   For a quick overview of all documented packets, see the main **[Packet Reference](./packets/README.md)**.
-*   For detailed information on specific SMSG packets, see the [SMSG Packets directory](./packets/smsg).
-*   For detailed information on specific CMSG packets, see the [CMSG Packets directory](./packets/cmsg).
-*   For the step-by-step process of discovering SMSG packet parsers, consult the **[SMSG Parser Discovery Playbook](./methodologies/smsg-parser-discovery-playbook.md)**.
-*   For the step-by-step process of discovering CMSG packet builders, consult the **[CMSG Parser Discovery Playbook](./methodologies/cmsg-parser-discovery-playbook.md)**.
-*   As a supplementary technique for validating findings with live memory, see the **[Memory Correlation Workflow](./methodologies/memory-correlation-workflow.md)**.
+*   **[Methodologies](./methodologies/README.md):** Guides and playbooks for reverse engineering the game client. These documents provide the step-by-step processes used to discover the information in this repository.
+
+*   **[Raw Decompilations](./raw_decompilations/README.md):** Organized raw decompiled code snippets used as direct evidence for the architectural descriptions and packet analyses.
+
+## Getting Started & Common Workflows
+
+*   **To understand the overall network architecture, start with [System Architecture](./system-architecture.md).**
+*   To find a specific packet, see the main **[Packet Reference](./packets/README.md)**.
+*   For the step-by-step process of discovering new packets, consult the **[Discovery Playbooks](./methodologies/discovery_playbooks/README.md)**.
 *   For a guide on recovering function names from the executable, see **[Function Naming from Assert Strings](./methodologies/function-naming-from-assert-strings.md)**.
+*   As a supplementary technique for validating findings with live memory, see the **[Memory Correlation Workflow](./methodologies/memory-correlation-workflow.md)**.
 
 We hope this documentation provides valuable insights and aids in your exploration of Guild Wars 2's internals.
