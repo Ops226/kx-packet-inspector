@@ -31,7 +31,7 @@ MsgUnpack::ParseWithSchema
   local_38[0] = param_4;
   if (param_5 == 0) {
                     /* WARNING: Subroutine does not return */
-    FUN_1409adab0(2,0x1420de790,0,param_4);
+    Arena::Core::Platform::Common::Log(2,0x1420de790,0,param_4);
   }
   uVar16 = *param_1;
   if ((uVar16 == 0) || (uVar16 == 0x18)) {
@@ -46,7 +46,7 @@ MsgUnpack::ParseWithSchema
     }
     if (param_5 < (byte *)((ulonglong)*(uint *)(&DAT_1420de510 + lVar2) + (longlong)param_4)) {
                     /* WARNING: Subroutine does not return */
-      FUN_1409adab0(2,0x1420de7e0,param_5,&IMAGE_DOS_HEADER_140000000);
+      Arena::Core::Platform::Common::Log(2,0x1420de7e0,param_5,&IMAGE_DOS_HEADER_140000000);
     }
     switch(uVar16) {
     case 1:
@@ -157,7 +157,7 @@ LAB_140fd4609:
       if (cVar3 != '\0') {
         uVar16 = param_1[8];
         if (uVar16 == 0) goto LAB_140fd4a95;
-        puVar11 = (ulonglong *)FUN_140fd6d70(param_6,uVar16);
+        puVar11 = (ulonglong *)Arena::Core::Collections::Array(param_6,uVar16);
         pIVar17 = (IMAGE_DOS_HEADER *)
                   ParseWithSchema(*(uint **)(param_1 + 6),param_2,param_3,puVar11,
                                   (longlong)puVar11 + (ulonglong)uVar16,param_6,param_7,(uint *)0x0)
@@ -173,7 +173,7 @@ LAB_140fd4609:
     case 0x10:
       if (param_1[8] == 0) goto LAB_140fd4a95;
       uVar16 = param_1[8] * param_1[4];
-      puVar11 = (ulonglong *)FUN_140fd6d70(param_6,uVar16);
+      puVar11 = (ulonglong *)Arena::Core::Collections::Array(param_6,uVar16);
       uVar15 = (ulonglong)uVar16 + (longlong)puVar11;
       *param_4 = (ulonglong)puVar11;
       uVar16 = 0;
@@ -204,7 +204,7 @@ LAB_140fd4738:
         if (uVar16 <= param_1[4]) {
           *param_2 = *param_2 + 1;
           uVar6 = param_1[8];
-          puVar11 = (ulonglong *)FUN_140fd6d70(param_6,uVar16 * uVar6);
+          puVar11 = (ulonglong *)Arena::Core::Collections::Array(param_6,uVar16 * uVar6);
           *(ulonglong **)((longlong)param_4 + 1) = puVar11;
           uVar14 = 0;
           local_38[0] = (ulonglong *)((ulonglong)(uVar16 * uVar6) + (longlong)puVar11);
@@ -238,7 +238,7 @@ LAB_140fd47ec:
         if (uVar16 <= param_1[4]) {
           *param_2 = *param_2 + 2;
           uVar6 = param_1[8];
-          puVar11 = (ulonglong *)FUN_140fd6d70(param_6,uVar16 * uVar6);
+          puVar11 = (ulonglong *)Arena::Core::Collections::Array(param_6,uVar16 * uVar6);
           *(ulonglong **)((longlong)param_4 + 2) = puVar11;
           uVar14 = 0;
           local_38[0] = (ulonglong *)((ulonglong)(uVar16 * uVar6) + (longlong)puVar11);
@@ -268,7 +268,7 @@ LAB_140fd4aa7:
       if (param_3 < (ushort *)((ulonglong)param_1[4] + *param_2)) {
         return (ulonglong *)pIVar17;
       }
-      puVar12 = (undefined1 *)FUN_140fd6d70(param_6,param_1[4]);
+      puVar12 = (undefined1 *)Arena::Core::Collections::Array(param_6,param_1[4]);
       uVar16 = 0;
       *param_4 = (ulonglong)puVar12;
       if (param_1[4] == 0) goto LAB_140fd4738;
@@ -300,7 +300,7 @@ LAB_140fd4aa7:
          ((uVar6 >> 0x10 & 1) != 0)) {
         *param_8 = (uint)*pbVar1;
       }
-      puVar12 = (undefined1 *)FUN_140fd6d70(param_6,uVar16);
+      puVar12 = (undefined1 *)Arena::Core::Collections::Array(param_6,uVar16);
       *(undefined1 **)((longlong)param_4 + 1) = puVar12;
       if (bVar4 == 0) goto LAB_140fd47ec;
       do {
@@ -331,7 +331,7 @@ LAB_140fd4aa7:
          ((uVar6 >> 0x10 & 1) != 0)) {
         *param_8 = (uint)*pbVar1;
       }
-      puVar12 = (undefined1 *)FUN_140fd6d70(param_6,uVar16);
+      puVar12 = (undefined1 *)Arena::Core::Collections::Array(param_6,uVar16);
       *(undefined1 **)((longlong)param_4 + 2) = puVar12;
       if (uVar5 == 0) goto LAB_140fd489c;
       do {

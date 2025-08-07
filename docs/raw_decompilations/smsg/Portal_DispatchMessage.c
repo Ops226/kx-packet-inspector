@@ -64,31 +64,32 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
                         (ulonglong)puVar30);
     puVar27 = *(ushort **)(lVar16 + 0x12);
     puVar21 = (undefined8 *)(lVar16 + 2);
-    plVar13 = (longlong *)FUN_1402584f0(param_1,puVar21,puVar27);
+    plVar13 = (longlong *)Gw2::Game::Portal::PlManager(param_1,puVar21,puVar27);
     if (plVar13 == (longlong *)0x0) {
                     /* WARNING: Subroutine does not return */
       FUN_1409cd550();
     }
-    uVar18 = FUN_140269130((uint)*(byte *)(lVar16 + 0x23),puVar21,puVar27,puVar30);
+    uVar18 = Gw2::Game::Portal::PlUtil((uint)*(byte *)(lVar16 + 0x23),puVar21,puVar27,puVar30);
     puVar22 = *(ushort **)(lVar16 + 0x1a);
     uVar28 = uVar18 & 0xffffffff;
     plVar8 = (longlong *)FUN_1402579b0(param_1,puVar22);
     if (plVar8 == (longlong *)0x0) {
       if ((int)uVar18 == 0) break;
-      FUN_140269680((uint)*(byte *)(lVar16 + 0x22),puVar22,puVar27,puVar30);
-      plVar8 = (longlong *)FUN_140253aa0(param_1,*(ushort **)(lVar16 + 0x1a));
+      Gw2::Game::Portal::PlUtil((uint)*(byte *)(lVar16 + 0x22),puVar22,puVar27,puVar30);
+      plVar8 = (longlong *)Gw2::Game::Portal::PlChannel(param_1,*(ushort **)(lVar16 + 0x1a));
       if (plVar8 == (longlong *)0x0) break;
     }
     uVar14 = 0;
     plVar7 = plVar13;
-    FUN_14025cd70((longlong)(plVar8 + 1),plVar13,uVar28,0);
+    Arena::Core::Collections::Array((longlong)(plVar8 + 1),plVar13,uVar28,0);
     if (*(longlong *)(lVar16 + 0x24) == 0) {
       uVar6 = 0;
       plVar7 = (longlong *)&DAT_141b61e10;
     }
     else {
-      uVar14 = FUN_140269130((uint)*(byte *)(*(longlong *)(lVar16 + 0x24) + 0x10),plVar7,uVar28,
-                             uVar14);
+      uVar14 = Gw2::Game::Portal::PlUtil
+                         ((uint)*(byte *)(*(longlong *)(lVar16 + 0x24) + 0x10),plVar7,uVar28,uVar14)
+      ;
       uVar6 = (undefined4)uVar14;
       plVar7 = *(longlong **)(lVar16 + 0x24);
     }
@@ -104,7 +105,8 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
     lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142512810,param_3[2],
                         (ulonglong)(param_3 + 4));
-    lVar15 = FUN_1402584f0(param_1,(undefined8 *)(lVar16 + 0x1a),*(ushort **)(lVar16 + 0x2a));
+    lVar15 = Gw2::Game::Portal::PlManager
+                       (param_1,(undefined8 *)(lVar16 + 0x1a),*(ushort **)(lVar16 + 0x2a));
     if (lVar15 == 0) {
                     /* WARNING: Subroutine does not return */
       FUN_1409cd550();
@@ -118,7 +120,7 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
     lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_1425129a0,param_3[2],
                         (ulonglong)puVar30);
-    FUN_1402605f0(param_1,lVar16,uVar18,puVar30);
+    Gw2::Game::Portal::PlManager(param_1,lVar16,uVar18,puVar30);
     break;
   case 0x30:
     lVar16 = MsgConn::BuildArgsFromSchema
@@ -148,7 +150,7 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
                         (ulonglong)(param_3 + 0x45));
     plVar13 = (longlong *)FUN_1402579b0(param_1,(ushort *)(param_3 + 4));
     if (plVar13 != (longlong *)0x0) {
-      FUN_14025bfe0((longlong)(plVar13 + 1));
+      Arena::Core::Collections::Array((longlong)(plVar13 + 1));
       if (*(int *)(lVar16 + 2) != 0) {
         lVar15 = FUN_1409a4490();
         local_68 = (longlong *)CONCAT44(local_68._4_4_,*(undefined4 *)(lVar16 + 2));
@@ -171,7 +173,7 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
     if (lVar11 != 0) {
       local_60 = *(longlong **)(lVar15 + 2);
       uStack_58 = *(ulonglong *)(lVar15 + 10);
-      plVar13 = (longlong *)FUN_140257db0(param_1 + 400,(int *)&local_60);
+      plVar13 = (longlong *)Arena::Core::Collections::Array(param_1 + 400,(int *)&local_60);
       if ((plVar13 != (longlong *)0x0) && (lVar16 != 0)) {
         piVar9 = (int *)(**(code **)(*plVar13 + 0x130))(plVar13);
         plVar8 = *(longlong **)(lVar11 + 0xaa8);
@@ -195,7 +197,7 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
     if (plVar13 != (longlong *)0x0) {
       local_60 = *(longlong **)(lVar15 + 10);
       uStack_58 = *(ulonglong *)(lVar15 + 0x12);
-      plVar8 = (longlong *)FUN_140257db0(lVar16 + 0x360,(int *)&local_60);
+      plVar8 = (longlong *)Arena::Core::Collections::Array(lVar16 + 0x360,(int *)&local_60);
       local_60 = plVar8;
       if ((plVar8 == (longlong *)0x0) ||
          (((*(byte *)(plVar8 + 0x2e) & 8) == 0 &&
@@ -235,7 +237,7 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
                     /* WARNING: Subroutine does not return */
       FUN_1409cd550();
     }
-    lVar15 = FUN_140257bc0(param_1 + 0x90,(ulonglong *)(param_3 + 4));
+    lVar15 = Arena::Core::Collections::Array(param_1 + 0x90,(ulonglong *)(param_3 + 4));
     if (lVar15 != 0) {
       FUN_140ffc0a0(lVar15 + 0x20,lVar16);
     }
@@ -246,7 +248,7 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
                     /* WARNING: Subroutine does not return */
       FUN_1409cd550();
     }
-    lVar16 = FUN_140257bc0(param_1 + 0x90,(ulonglong *)(param_3 + 4));
+    lVar16 = Arena::Core::Collections::Array(param_1 + 0x90,(ulonglong *)(param_3 + 4));
     if (lVar16 != 0) {
       if (lVar16 == -8) {
         lVar16 = 0;
@@ -260,7 +262,7 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
                     /* WARNING: Subroutine does not return */
       FUN_1409cd550();
     }
-    lVar16 = FUN_140257bc0(param_1 + 0x90,(ulonglong *)(param_3 + 4));
+    lVar16 = Arena::Core::Collections::Array(param_1 + 0x90,(ulonglong *)(param_3 + 4));
     if (lVar16 != 0) {
       if (lVar16 == -8) {
         lVar16 = 0;
@@ -275,8 +277,8 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
     lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513fa0,param_3[8],
                         (ulonglong)puVar30);
-    FUN_1402691e0((uint)*(byte *)(lVar16 + 10),puVar24,uVar18,puVar30);
-    lVar15 = FUN_140257bc0(param_1 + 0x90,(ulonglong *)(param_3 + 4));
+    Gw2::Game::Portal::PlUtil((uint)*(byte *)(lVar16 + 10),puVar24,uVar18,puVar30);
+    lVar15 = Arena::Core::Collections::Array(param_1 + 0x90,(ulonglong *)(param_3 + 4));
     if (lVar15 == 0) {
       lVar15 = FUN_140274c50();
     }
@@ -322,11 +324,11 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142512210,param_3[8],
                         (ulonglong)(param_3 + 9));
     lVar16 = *(longlong *)(lVar15 + 0x12);
-    lVar11 = FUN_140257bc0(param_1 + 0x90,(ulonglong *)(param_3 + 4));
+    lVar11 = Arena::Core::Collections::Array(param_1 + 0x90,(ulonglong *)(param_3 + 4));
     if (lVar11 != 0) {
       local_60 = *(longlong **)(lVar15 + 2);
       uStack_58 = *(ulonglong *)(lVar15 + 10);
-      plVar13 = (longlong *)FUN_140257db0(param_1 + 400,(int *)&local_60);
+      plVar13 = (longlong *)Arena::Core::Collections::Array(param_1 + 400,(int *)&local_60);
       if ((plVar13 != (longlong *)0x0) && (lVar16 != 0)) {
         piVar9 = (int *)(**(code **)(*plVar13 + 0x130))(plVar13);
         plVar8 = *(longlong **)(lVar11 + 0x178);
@@ -343,13 +345,13 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
     lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_1425140e0,param_3[8],
                         (ulonglong)(param_3 + 9));
-    lVar15 = FUN_140257bc0(param_1 + 0x90,(ulonglong *)(param_3 + 4));
+    lVar15 = Arena::Core::Collections::Array(param_1 + 0x90,(ulonglong *)(param_3 + 4));
     if (lVar15 != 0) {
       puVar25 = *(undefined8 **)(lVar16 + 3);
       puVar21 = (undefined8 *)((longlong)puVar25 + (ulonglong)*(byte *)(lVar16 + 2) * 0x24);
       if (puVar25 != puVar21) {
         do {
-          plVar13 = (longlong *)FUN_1402584f0(param_1,puVar25,(ushort *)puVar25[2]);
+          plVar13 = (longlong *)Gw2::Game::Portal::PlManager(param_1,puVar25,(ushort *)puVar25[2]);
           if (plVar13 == (longlong *)0x0) {
                     /* WARNING: Subroutine does not return */
             FUN_1409cd550();
@@ -385,7 +387,7 @@ void Portal::DispatchMessage(longlong param_1,longlong param_2,undefined4 *param
                     /* WARNING: Subroutine does not return */
       FUN_1409cd550();
     }
-    lVar16 = FUN_140257bc0(param_1 + 0x90,(ulonglong *)(param_3 + 4));
+    lVar16 = Arena::Core::Collections::Array(param_1 + 0x90,(ulonglong *)(param_3 + 4));
     if (lVar16 != 0) {
       uVar19 = 0;
       iVar20 = 0;
@@ -492,8 +494,9 @@ LAB_14025e618:
     uVar6 = *(undefined4 *)(lVar16 + 0x1a);
     lVar12 = FUN_14024fd60((uint *)(lVar11 + 0xb0),(int *)(lVar16 + 0x27));
     *(undefined4 *)(lVar12 + 0x20) = uVar6;
-    FUN_140268250(lVar11 + 8,(int *)(lVar16 + 0x27),*(undefined8 **)(lVar16 + 0x1f),
-                  (ulonglong)*(byte *)(lVar16 + 0x1e));
+    Arena::Core::Collections::Array
+              (lVar11 + 8,(int *)(lVar16 + 0x27),*(undefined8 **)(lVar16 + 0x1f),
+               (ulonglong)*(byte *)(lVar16 + 0x1e));
     if (lVar15 + 0x10 == 0) {
       lVar15 = 0;
     }
@@ -511,7 +514,7 @@ LAB_14025e618:
     local_60 = *(longlong **)(lVar16 + 2);
     uStack_58 = *(ulonglong *)(lVar16 + 10);
     local_50 = *(undefined4 *)(lVar16 + 0x12);
-    lVar15 = FUN_140257cf0(lVar15 + 0x50,(uint *)&local_60);
+    lVar15 = Arena::Core::Collections::Array(lVar15 + 0x50,(uint *)&local_60);
     if (lVar15 == 0) {
                     /* WARNING: Subroutine does not return */
       FUN_1409cd550();
@@ -620,7 +623,7 @@ LAB_14025e618:
     lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_1425137d0,param_3[2],
                         (ulonglong)(param_3 + 4));
-    plVar13 = (longlong *)FUN_140257a90(param_1 + 0xe0,(ulonglong *)(lVar16 + 2));
+    plVar13 = (longlong *)Arena::Core::Collections::Array(param_1 + 0xe0,(ulonglong *)(lVar16 + 2));
     if (plVar13 == (longlong *)0x0) {
                     /* WARNING: Subroutine does not return */
       FUN_1409cd550();
@@ -642,7 +645,7 @@ LAB_14025e618:
     lVar16 = MsgConn::BuildArgsFromSchema
                        ((short *)(param_1 + 0x170),(uint *)&DAT_142513f00,param_3[2],
                         (ulonglong)(param_3 + 4));
-    lVar15 = FUN_140257a90(param_1 + 0x1d8,(ulonglong *)(lVar16 + 2));
+    lVar15 = Arena::Core::Collections::Array(param_1 + 0x1d8,(ulonglong *)(lVar16 + 2));
     if (lVar15 != 0) {
       uVar6 = *(undefined4 *)(lVar16 + 0x12);
       lVar16 = lVar15;
@@ -702,7 +705,7 @@ LAB_14025e618:
         piVar10 = piVar10 + 1;
       } while (piVar10 < piVar9);
     }
-    FUN_140260720(plVar13,param_3[4],(short *)(param_3 + 5));
+    Arena::Core::Collections::Array(plVar13,param_3[4],(short *)(param_3 + 5));
   }
 LAB_14025ee2d:
                     /* WARNING: Subroutine does not return */

@@ -28,7 +28,7 @@ void GcSrv::Dispatch(longlong param_1,int *param_2,undefined8 param_3,undefined8
     switch(*param_2) {
     case 1:
       if (param_2[4] == 0) {
-        pcVar3 = FUN_14023d3c0;
+        pcVar3 = GcGameCmd::Handler;
       }
       else {
         if (param_2[4] != 3) {
@@ -55,9 +55,9 @@ void GcSrv::Dispatch(longlong param_1,int *param_2,undefined8 param_3,undefined8
     case 3:
       uVar1 = param_2[1];
       local_res10[0] = uVar1;
-      puVar4 = FUN_14023dd70(0x142628480,local_res10);
+      puVar4 = Arena::Core::Collections::Array(0x142628480,local_res10);
       (**(code **)(puVar4 + 0x12))(2,*(undefined8 *)(puVar4 + 0xc),0,0,puVar4 + 0x10);
-      lVar8 = FUN_14104d450();
+      lVar8 = Gw2::Engine::Event::EvtApi();
       uVar10 = 0;
       uVar12 = 4;
       uVar11 = (ulonglong)uVar1;
@@ -67,7 +67,7 @@ void GcSrv::Dispatch(longlong param_1,int *param_2,undefined8 param_3,undefined8
       return;
     case 4:
       local_res10[0] = param_2[1];
-      puVar4 = FUN_14023dd70(0x142628480,local_res10);
+      puVar4 = Arena::Core::Collections::Array(0x142628480,local_res10);
       uVar14 = 0;
       uVar10 = 0;
       (**(code **)(puVar4 + 0x12))(3,*(undefined8 *)(puVar4 + 0xc),0,0,puVar4 + 0x10);
@@ -79,7 +79,7 @@ void GcSrv::Dispatch(longlong param_1,int *param_2,undefined8 param_3,undefined8
     case 5:
       local_res10[0] = param_2[1];
       uVar1 = param_2[2];
-      puVar4 = FUN_14023dd70(0x142628480,local_res10);
+      puVar4 = Arena::Core::Collections::Array(0x142628480,local_res10);
       piVar7 = param_2 + 4;
       uVar11 = (ulonglong)uVar1;
       uVar12 = *(undefined8 *)(puVar4 + 0xc);

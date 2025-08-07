@@ -30,7 +30,7 @@ undefined8 MsgConn::BuildArgsFromSchema(short *param_1,uint *param_2,uint param_
   FUN_140240a60(param_1,uVar1);
   FUN_140fd6a90(local_38,param_1);
   uVar1 = param_2[8];
-  puVar2 = (ulonglong *)FUN_140fd6d70(local_38,uVar1);
+  puVar2 = (ulonglong *)Arena::Core::Collections::Array(local_38,uVar1);
   local_res18[0] = 0;
   MsgUnpack::ParseWithSchema
             (param_2,&local_res20,(ushort *)(param_3 + local_res20),puVar2,

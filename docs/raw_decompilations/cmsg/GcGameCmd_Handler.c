@@ -30,9 +30,9 @@ void GcGameCmd::Handler(int param_1,undefined8 param_2,uint param_3,byte *param_
         puVar1 = FUN_140fd6730(local_1b8);
         _DAT_1426283f0 = *(undefined4 *)(param_4 + 0x30);
         DAT_142628290 =
-             (byte *)FUN_140fd2290(param_2,0,FUN_14023d270,local_1b8[0],puVar1,0x14,
-                                   (undefined4 *)(param_4 + 0x34));
-        FUN_140fd6570(DAT_142628290);
+             (byte *)FUN_140fd2290(param_2,0,Gw2::Game::Net::Cli::GcGameCmd,local_1b8[0],puVar1,0x14
+                                   ,(undefined4 *)(param_4 + 0x34));
+        Gw2::Services::Msg::MsgProp(DAT_142628290);
         if (DAT_142628400 == 0) {
           if (DAT_142628404 != 0) {
             local_178 = (longlong *)0x0;
@@ -50,7 +50,7 @@ void GcGameCmd::Handler(int param_1,undefined8 param_2,uint param_3,byte *param_
               if (local_178 != (longlong *)0x0) {
                 local_138 = (**(code **)*local_178)(local_178,local_170);
               }
-              FUN_140fd2b30((longlong)DAT_142628290,1,local_170);
+              Gw2::Services::Msg::MsgConn((longlong)DAT_142628290,1,local_170);
             }
             if (local_178 != (longlong *)0x0) {
               (**(code **)(*local_178 + 0x20))(local_178,local_178 != local_1b0);
@@ -60,7 +60,7 @@ void GcGameCmd::Handler(int param_1,undefined8 param_2,uint param_3,byte *param_
         else {
           DAT_142628400 = 1;
           if (DAT_142628290 != (byte *)0x0) {
-            FUN_140fd2ac0((longlong)DAT_142628290,1);
+            Gw2::Services::Msg::MsgConn((longlong)DAT_142628290,1);
           }
         }
       }
@@ -92,7 +92,7 @@ void GcGameCmd::Handler(int param_1,undefined8 param_2,uint param_3,byte *param_
       goto LAB_14023d6bc;
     }
     if (DAT_142628290 != (byte *)0x0) {
-      FUN_140fd6570(0);
+      Gw2::Services::Msg::MsgProp(0);
       FUN_140fd2570(DAT_142628290,0,0);
       DAT_142628290 = (byte *)0x0;
     }

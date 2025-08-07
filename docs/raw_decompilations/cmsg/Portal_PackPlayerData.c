@@ -1,25 +1,23 @@
 
-void Portal::PackPlayerData(undefined4 param_1)
+void Portal::PackPlayerData(void)
 
 {
   int iVar1;
-  longlong *plVar2;
-  byte *pbVar3;
-  longlong lVar4;
-  undefined8 uVar5;
-  char *pcVar6;
+  byte *pbVar2;
+  longlong lVar3;
+  char *pcVar4;
+  ulonglong uVar5;
+  short *psVar6;
   ulonglong uVar7;
-  short *psVar8;
-  ulonglong uVar9;
-  uint uVar10;
-  ulonglong uVar11;
+  undefined8 uVar8;
+  uint uVar9;
+  ulonglong uVar10;
   longlong unaff_RBP;
-  longlong *unaff_RDI;
-  undefined **ppuVar12;
-  code *pcVar13;
-  undefined4 unaff_R13D;
-  undefined4 unaff_000000ac;
-  byte *pbVar14;
+  longlong *unaff_RSI;
+  undefined **unaff_RDI;
+  code *pcVar11;
+  longlong unaff_R13;
+  byte *pbVar12;
   uint unaff_R15D;
   char *in_stack_00000030;
   char *in_stack_00000058;
@@ -28,145 +26,147 @@ void Portal::PackPlayerData(undefined4 param_1)
   char *in_stack_00000070;
   uint *in_stack_00000078;
   
-  *(undefined4 *)(unaff_RBP + -0x6e) = unaff_R13D;
-  *(undefined2 **)(unaff_RBP + -0x23) = &DAT_1418fd248;
-  *(undefined2 **)(unaff_RBP + -0x1b) = &DAT_1418fd248;
-  plVar2 = (longlong *)(**(code **)(*unaff_RDI + 0xe8))(param_1,0,0xffffffff);
-  if (plVar2 != (longlong *)0x0) {
-    do {
-      ppuVar12 = &PTR_DAT_141902250;
-      (**(code **)*plVar2)(plVar2);
-      pbVar3 = (byte *)(**(code **)(*plVar2 + 0x10))(plVar2);
-      pcVar13 = *(code **)(*plVar2 + 0x80);
-      lVar4 = (*pcVar13)(plVar2,"scope",0);
-      if ((lVar4 == 0) || (uVar5 = FUN_140268cc0(lVar4), (int)uVar5 != 0)) {
-        uVar11 = 0;
-        do {
-          pcVar6 = (char *)(**(code **)*plVar2)(plVar2);
-          uVar5 = FUN_1409aaa50((longlong)*ppuVar12,pcVar6,-1);
-          if ((int)uVar5 == 0) {
-            if ((&DAT_141902258)[uVar11 * 8] == 4) {
-              uVar5 = (**(code **)(*plVar2 + 0x10))(plVar2);
-              iVar1 = FUN_140dc86b0(uVar5,(undefined1 (*) [32])(unaff_RBP + 0x20));
-              if ((((iVar1 != 0) && (*(int *)(unaff_RBP + 0x20) == 0)) &&
-                  (*(int *)(unaff_RBP + 0x24) == 0)) &&
-                 ((*(int *)(unaff_RBP + 0x28) == 0 && (*(int *)(unaff_RBP + 0x2c) == 0)))) break;
-            }
-            if (uVar11 * 0x20 != -0x141902250) {
-              pbVar14 = (byte *)(unaff_RBP + -0x70 + (&DAT_141902260)[uVar11 * 4]);
-              switch((&DAT_141902258)[uVar11 * 8]) {
-              case 0:
-                uVar9 = thunk_FUN_140e4935c((longlong)pbVar3,(longlong *)&stack0x00000058,10);
-                if ((0xff < uVar9) || (*in_stack_00000058 != '\0')) goto LAB_14027b63a;
-                *pbVar14 = (byte)uVar9;
-                break;
-              case 1:
-                if (0xfe < (uint)(&DAT_14190226c)[uVar11 * 8]) {
+code_r0x00014027b63a:
+  do {
+    unaff_RSI = (longlong *)(**(code **)(*unaff_RSI + 0x160))(unaff_RSI,0,0xffffffff);
+    if (unaff_RSI == (longlong *)0x0) {
+      if (unaff_R15D < 0xff) {
+        *(char *)(unaff_RBP + -4) = (char)unaff_R15D;
+      }
+      else {
+        *(undefined1 *)(unaff_RBP + -4) = 0xff;
+      }
+      *(longlong *)(unaff_RBP + -3) = unaff_R13;
+      uVar8 = MsgConn::BuildPacketFromSchema
+                        (*(short **)(unaff_RBP + -0x80),(uint *)&DAT_142514e00,0x75,
+                         unaff_RBP + -0x70,in_stack_00000078);
+      **(undefined8 **)(unaff_RBP + -0x78) = uVar8;
+      if (unaff_R13 == 0) {
                     /* WARNING: Subroutine does not return */
-                  FUN_1409cd550();
-                }
-                if ((&DAT_14190226c)[uVar11 * 8] == 0) {
+        FUN_140e37790(*(ulonglong *)(unaff_RBP + 0x30) ^ (ulonglong)&stack0x00000000);
+      }
                     /* WARNING: Subroutine does not return */
-                  FUN_1409cd550();
-                }
-                if (*pbVar3 == 0) {
-                  *pbVar14 = *pbVar14 & ~*(byte *)(&DAT_14190226c + uVar11 * 8);
-                }
-                else {
-                  *pbVar14 = *pbVar14 | *(byte *)(&DAT_14190226c + uVar11 * 8);
-                }
-                break;
-              case 2:
-                uVar9 = thunk_FUN_140e491e8((longlong)pbVar3,(longlong *)&stack0x00000060,10,
-                                            (int)pcVar13);
-                if ((0x17fffffff < uVar9 + 0x80000000) || (*in_stack_00000060 != '\0'))
-                goto LAB_14027b63a;
-                *(int *)pbVar14 = (int)uVar9;
-                break;
-              case 3:
-                uVar9 = thunk_FUN_140e491e8((longlong)pbVar3,(longlong *)&stack0x00000030,10,
-                                            (int)pcVar13);
-                if ((0x17fffffff < uVar9 + 0x80000000) || (*in_stack_00000030 != ','))
-                goto LAB_14027b63a;
-                in_stack_00000030 = in_stack_00000030 + 1;
-                uVar7 = thunk_FUN_140e491e8((longlong)in_stack_00000030,(longlong *)&stack0x00000030
-                                            ,10,(int)pcVar13);
-                if ((0x17fffffff < uVar7 + 0x80000000) || (*in_stack_00000030 != '\0'))
-                goto LAB_14027b63a;
-                *(int *)pbVar14 = (int)uVar9;
-                *(int *)(pbVar14 + 4) = (int)uVar7;
-                break;
-              case 4:
-                if (*pbVar3 == 0) {
-                  *(undefined8 *)(unaff_RBP + 0x18) = 0;
-                  *(undefined8 *)(unaff_RBP + 0x10) = 0;
-                  uVar5 = *(undefined8 *)(unaff_RBP + 0x18);
-                  *(undefined8 *)pbVar14 = *(undefined8 *)(unaff_RBP + 0x10);
-                  *(undefined8 *)(pbVar14 + 8) = uVar5;
-                }
-                else {
-                  iVar1 = FUN_140dc86b0(pbVar3,(undefined1 (*) [32])(unaff_RBP + 0x10));
-                  if (iVar1 == 0) goto LAB_14027b63a;
-                  uVar5 = *(undefined8 *)(unaff_RBP + 0x18);
-                  *(undefined8 *)pbVar14 = *(undefined8 *)(unaff_RBP + 0x10);
-                  *(undefined8 *)(pbVar14 + 8) = uVar5;
-                }
-                break;
-              case 5:
-                if ((&DAT_14190226c)[uVar11 * 8] == 0) {
+      FUN_1409bf4b0(unaff_R13);
+    }
+    (**(code **)*unaff_RSI)(unaff_RSI);
+    pbVar2 = (byte *)(**(code **)(*unaff_RSI + 0x10))(unaff_RSI);
+    pcVar11 = *(code **)(*unaff_RSI + 0x80);
+    lVar3 = (*pcVar11)(unaff_RSI,"scope",0);
+  } while ((lVar3 != 0) && (uVar8 = FUN_140268cc0(lVar3), (int)uVar8 == 0));
+  uVar10 = 0;
+LAB_14027b330:
+  pcVar4 = (char *)(**(code **)*unaff_RSI)(unaff_RSI);
+  uVar8 = FUN_1409aaa50((longlong)*unaff_RDI,pcVar4,-1);
+  if ((int)uVar8 != 0) goto code_r0x00014027b34e;
+  if ((&DAT_141902258)[uVar10 * 8] == 4) {
+    uVar8 = (**(code **)(*unaff_RSI + 0x10))(unaff_RSI);
+    iVar1 = FUN_140dc86b0(uVar8,(undefined1 (*) [32])(unaff_RBP + 0x20));
+    if ((((iVar1 != 0) && (*(int *)(unaff_RBP + 0x20) == 0)) && (*(int *)(unaff_RBP + 0x24) == 0))
+       && ((*(int *)(unaff_RBP + 0x28) == 0 && (*(int *)(unaff_RBP + 0x2c) == 0))))
+    goto LAB_14027b3aa;
+  }
+  if (uVar10 * 0x20 != -0x141902250) {
+    pbVar12 = (byte *)(unaff_RBP + -0x70 + (&DAT_141902260)[uVar10 * 4]);
+    switch((&DAT_141902258)[uVar10 * 8]) {
+    case 0:
+      uVar7 = thunk_FUN_140e4935c((longlong)pbVar2,(longlong *)&stack0x00000058,10);
+      if ((uVar7 < 0x100) && (*in_stack_00000058 == '\0')) {
+        *pbVar12 = (byte)uVar7;
+        goto LAB_14027b62d;
+      }
+      break;
+    case 1:
+      if (0xfe < (uint)(&DAT_14190226c)[uVar10 * 8]) {
                     /* WARNING: Subroutine does not return */
-                  FUN_1409cd550();
-                }
-                psVar8 = (short *)FUN_140e2e910(in_stack_00000068,
-                                                (ulonglong)(uint)(&DAT_14190226c)[uVar11 * 8] * 2);
-                FUN_1409acae0(psVar8,pbVar3,(ulonglong)(uint)(&DAT_14190226c)[uVar11 * 8],-1);
-                *(short **)pbVar14 = psVar8;
-                break;
-              case 6:
-                uVar9 = thunk_FUN_140e4935c((longlong)pbVar3,(longlong *)&stack0x00000070,10);
-                if ((0xffff < uVar9) || (*in_stack_00000070 != '\0')) goto LAB_14027b63a;
-                *(short *)pbVar14 = (short)uVar9;
-                break;
-              default:
+        FUN_1409cd550();
+      }
+      if ((&DAT_14190226c)[uVar10 * 8] == 0) {
                     /* WARNING: Subroutine does not return */
-                FUN_1409cd700("D:\\Perforce\\Live\\NAEU\\v2\\Code\\Gw2\\Game\\Portal\\PlPack.cpp",
-                              0x112,0x141902510,pcVar13);
-              }
-              *(uint *)(unaff_RBP + -0x6e) =
-                   *(uint *)(unaff_RBP + -0x6e) | (&DAT_141902268)[uVar11 * 8];
-              goto LAB_14027b63a;
-            }
-            break;
-          }
-          uVar10 = (int)uVar11 + 1;
-          uVar11 = (ulonglong)uVar10;
-          ppuVar12 = ppuVar12 + 4;
-        } while (uVar10 < 0x14);
-        if ((pbVar3 != (byte *)0x0) && (*pbVar3 != 0)) {
-                    /* WARNING: Subroutine does not return */
-          FUN_140242c60((short *)&stack0x00000038,unaff_R15D + 1);
+        FUN_1409cd550();
+      }
+      if (*pbVar2 == 0) {
+        *pbVar12 = *pbVar12 & ~*(byte *)(&DAT_14190226c + uVar10 * 8);
+      }
+      else {
+        *pbVar12 = *pbVar12 | *(byte *)(&DAT_14190226c + uVar10 * 8);
+      }
+      goto LAB_14027b62d;
+    case 2:
+      uVar7 = thunk_FUN_140e491e8((longlong)pbVar2,(longlong *)&stack0x00000060,10,(int)pcVar11);
+      if ((uVar7 + 0x80000000 < 0x180000000) && (*in_stack_00000060 == '\0')) {
+        *(int *)pbVar12 = (int)uVar7;
+        goto LAB_14027b62d;
+      }
+      break;
+    case 3:
+      uVar7 = thunk_FUN_140e491e8((longlong)pbVar2,(longlong *)&stack0x00000030,10,(int)pcVar11);
+      if ((uVar7 + 0x80000000 < 0x180000000) && (*in_stack_00000030 == ',')) {
+        in_stack_00000030 = in_stack_00000030 + 1;
+        uVar5 = thunk_FUN_140e491e8((longlong)in_stack_00000030,(longlong *)&stack0x00000030,10,
+                                    (int)pcVar11);
+        if ((uVar5 + 0x80000000 < 0x180000000) && (*in_stack_00000030 == '\0')) {
+          *(int *)pbVar12 = (int)uVar7;
+          *(int *)(pbVar12 + 4) = (int)uVar5;
+          goto LAB_14027b62d;
         }
       }
-LAB_14027b63a:
-      plVar2 = (longlong *)(**(code **)(*plVar2 + 0x160))(plVar2,0);
-    } while (plVar2 != (longlong *)0x0);
-    if (0xfe < unaff_R15D) {
-      *(undefined1 *)(unaff_RBP + -4) = 0xff;
-      goto LAB_14027b686;
+      break;
+    case 4:
+      if (*pbVar2 == 0) {
+        *(undefined8 *)(unaff_RBP + 0x18) = 0;
+        *(undefined8 *)(unaff_RBP + 0x10) = 0;
+        uVar8 = *(undefined8 *)(unaff_RBP + 0x18);
+        *(undefined8 *)pbVar12 = *(undefined8 *)(unaff_RBP + 0x10);
+        *(undefined8 *)(pbVar12 + 8) = uVar8;
+      }
+      else {
+        iVar1 = FUN_140dc86b0(pbVar2,(undefined1 (*) [32])(unaff_RBP + 0x10));
+        if (iVar1 == 0) break;
+        uVar8 = *(undefined8 *)(unaff_RBP + 0x18);
+        *(undefined8 *)pbVar12 = *(undefined8 *)(unaff_RBP + 0x10);
+        *(undefined8 *)(pbVar12 + 8) = uVar8;
+      }
+      goto LAB_14027b62d;
+    case 5:
+      if ((&DAT_14190226c)[uVar10 * 8] == 0) {
+                    /* WARNING: Subroutine does not return */
+        FUN_1409cd550();
+      }
+      psVar6 = (short *)FUN_140e2e910(in_stack_00000068,
+                                      (ulonglong)(uint)(&DAT_14190226c)[uVar10 * 8] * 2);
+      Arena::Core::Basics::Str(psVar6,pbVar2,(ulonglong)(uint)(&DAT_14190226c)[uVar10 * 8],-1);
+      *(short **)pbVar12 = psVar6;
+LAB_14027b62d:
+      *(uint *)(unaff_RBP + -0x6e) = *(uint *)(unaff_RBP + -0x6e) | (&DAT_141902268)[uVar10 * 8];
+      break;
+    case 6:
+      uVar7 = thunk_FUN_140e4935c((longlong)pbVar2,(longlong *)&stack0x00000070,10);
+      if ((uVar7 < 0x10000) && (*in_stack_00000070 == '\0')) {
+        *(short *)pbVar12 = (short)uVar7;
+        goto LAB_14027b62d;
+      }
+      break;
+    default:
+                    /* WARNING: Subroutine does not return */
+      FUN_1409cd700("D:\\Perforce\\Live\\NAEU\\v2\\Code\\Gw2\\Game\\Portal\\PlPack.cpp",0x112,
+                    0x141902510,pcVar11);
     }
+    unaff_RDI = &PTR_DAT_141902250;
+    goto code_r0x00014027b63a;
   }
-  *(char *)(unaff_RBP + -4) = (char)unaff_R15D;
-LAB_14027b686:
-  *(ulonglong *)(unaff_RBP + -3) = CONCAT44(unaff_000000ac,unaff_R13D);
-  uVar5 = MsgConn::BuildPacketFromSchema
-                    (*(short **)(unaff_RBP + -0x80),(uint *)&DAT_142514e00,0x75,unaff_RBP + -0x70,
-                     in_stack_00000078);
-  **(undefined8 **)(unaff_RBP + -0x78) = uVar5;
-  if (CONCAT44(unaff_000000ac,unaff_R13D) == 0) {
+  goto LAB_14027b3aa;
+code_r0x00014027b34e:
+  uVar9 = (int)uVar10 + 1;
+  uVar10 = (ulonglong)uVar9;
+  unaff_RDI = unaff_RDI + 4;
+  if (0x13 < uVar9) goto LAB_14027b3aa;
+  goto LAB_14027b330;
+LAB_14027b3aa:
+  unaff_RDI = &PTR_DAT_141902250;
+  if ((pbVar2 != (byte *)0x0) && (*pbVar2 != 0)) {
                     /* WARNING: Subroutine does not return */
-    FUN_140e37790(*(ulonglong *)(unaff_RBP + 0x30) ^ (ulonglong)&stack0x00000000);
+    FUN_140242c60((short *)&stack0x00000038,unaff_R15D + 1);
   }
-                    /* WARNING: Subroutine does not return */
-  FUN_1409bf4b0(CONCAT44(unaff_000000ac,unaff_R13D));
+  goto code_r0x00014027b63a;
 }
 

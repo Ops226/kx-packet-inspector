@@ -12,14 +12,16 @@ undefined8 Marker::Cli::ProcessAgentMarkerUpdate(undefined8 param_1,longlong par
   if (*(uint *)(param_2 + 6) != 0) {
     local_10 = *(undefined4 *)(param_2 + 0x16);
     local_c = *(undefined4 *)(param_2 + 0x1a);
-    FUN_1413e3840(lVar1,*(uint *)(param_2 + 2),*(uint *)(param_2 + 6),&local_18,
-                  *(undefined4 *)(param_2 + 10));
+    Gw2::Game::Marker::Cli::MkrCliContext
+              (lVar1,*(uint *)(param_2 + 2),*(uint *)(param_2 + 6),&local_18,
+               *(undefined4 *)(param_2 + 10));
     return 1;
   }
   local_10 = *(undefined4 *)(param_2 + 0x16);
   local_c = *(undefined4 *)(param_2 + 0x1a);
-  FUN_1413e3a00(lVar1,*(uint *)(param_2 + 2),&local_18,*(undefined4 *)(param_2 + 10),
-                (uint)*(byte *)(param_2 + 0x1e));
+  Gw2::Game::Marker::Cli::MkrCliContext
+            (lVar1,*(uint *)(param_2 + 2),&local_18,*(undefined4 *)(param_2 + 10),
+             (uint)*(byte *)(param_2 + 0x1e));
   return 1;
 }
 

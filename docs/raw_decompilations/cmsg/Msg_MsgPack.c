@@ -87,7 +87,7 @@ void Msg::MsgPack(undefined8 *param_1,longlong *param_2,uint *param_3,longlong *
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
       *local_e8 = *local_e8 + 2;
       *param_6 = *param_6 + 2;
@@ -138,7 +138,7 @@ LAB_140fd2eb0:
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
       goto LAB_140fd2ee9;
     case 6:
@@ -167,7 +167,7 @@ LAB_140fd2f6e:
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
       goto LAB_140fd2fa7;
     case 7:
@@ -188,7 +188,7 @@ LAB_140fd2f6e:
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
       goto LAB_140fd2ee9;
     case 8:
@@ -216,7 +216,7 @@ LAB_140fd2f6e:
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
       *local_e8 = *local_e8 + 0xc;
       *param_6 = *param_6 + 0xc;
@@ -248,7 +248,7 @@ LAB_140fd315e:
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
       *local_e8 = *local_e8 + 0x10;
       *param_6 = *param_6 + 0x10;
@@ -280,7 +280,7 @@ LAB_140fd315e:
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
       local_d8 = *param_2;
       lStack_d0 = param_2[1];
@@ -325,7 +325,7 @@ LAB_140fd315e:
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
       *local_e8 = *local_e8 + 0x1c;
       *param_6 = *param_6 + 0x1c;
@@ -336,7 +336,7 @@ LAB_140fd315e:
       if (*(short **)*param_4 != (short *)0x0) {
         psVar13 = *(short **)*param_4;
       }
-      uVar2 = FUN_1409ab6c0(psVar13);
+      uVar2 = Arena::Core::Basics::Str(psVar13);
       uVar12 = (int)uVar2 + 1;
       if (param_3[4] < uVar12) {
         param_1[3] = 0x3c2;
@@ -368,7 +368,7 @@ LAB_140fd315e:
           *(longlong *)(lVar3 + 0xd0) = *(longlong *)(lVar3 + 0xd0) + 2;
         }
         if (uVar17 < uVar16) break;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
         uVar18 = uVar18 - uVar17;
       }
       *local_e8 = *local_e8 + 8;
@@ -381,7 +381,7 @@ LAB_140fd315e:
       if (*(char **)*param_4 != (char *)0x0) {
         pcVar14 = *(char **)*param_4;
       }
-      uVar2 = FUN_1409ab670(pcVar14);
+      uVar2 = Arena::Core::Basics::Str(pcVar14);
       uVar12 = (int)uVar2 + 1;
       if (param_3[4] < uVar12) {
         param_1[3] = 0x3cf;
@@ -433,7 +433,7 @@ LAB_140fd315e:
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
       *param_6 = *param_6 + 1;
       if (local_c0 != 0) {
@@ -503,7 +503,7 @@ LAB_140fd315e:
           param_4 = local_e8;
           if (uVar18 < uVar17) break;
           uVar12 = uVar12 - uVar18;
-          FUN_140fd1e80();
+          MsgConn_FlushPacketBuffer();
         }
       }
       uVar12 = 0;
@@ -564,7 +564,7 @@ LAB_140fd315e:
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
       uVar12 = 0;
       local_a8 = *(longlong *)*local_e8;
@@ -687,7 +687,7 @@ LAB_140fd315e:
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
       goto LAB_140fd2fa7;
     case 0x18:
@@ -732,7 +732,7 @@ LAB_140fd3ec6:
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
 LAB_140fd2fa7:
       *local_e8 = *local_e8 + 4;
@@ -757,7 +757,7 @@ LAB_140fd2fa7:
         }
         if (uVar18 < uVar17) break;
         uVar12 = uVar12 - uVar18;
-        FUN_140fd1e80();
+        MsgConn_FlushPacketBuffer();
       }
 LAB_140fd2ee9:
       *local_e8 = *local_e8 + 8;

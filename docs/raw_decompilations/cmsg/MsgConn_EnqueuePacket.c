@@ -19,7 +19,7 @@ void MsgConn::EnqueuePacket
   local_78 = param_6;
   local_70 = 0x23;
   local_98 = param_4;
-  local_68 = FUN_1409bdd20();
+  local_68 = Arena::Core::Platform::Windows::Common::WinTime();
   if (0x7fff < local_70) {
                     /* WARNING: Subroutine does not return */
     FUN_1409cd550();

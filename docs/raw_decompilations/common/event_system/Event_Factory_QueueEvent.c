@@ -22,12 +22,12 @@ void Event::Factory_QueueEvent
     FUN_1409a9a20(pauVar1,param_2);
   }
   if (pauVar1 == (undefined1 (*) [32])0x0) {
-    FUN_1409aba40(local_68,0x40,0x141b63008,param_2 & 0xffffffff);
+    Arena::Core::Basics::Str(local_68,0x40,0x141b63008,param_2 & 0xffffffff);
     pcVar3 = "(nullptr)";
     if (param_5 != (char *)0x0) {
       pcVar3 = param_5;
     }
-    FUN_1409cd8a0(5,local_68,pcVar3,param_6,0);
+    Arena::Core::Platform::Windows::Exe::Error::ExeError(5,local_68,pcVar3,param_6,0);
   }
   puVar2 = (undefined1 *)(*DAT_14263eae0)(pauVar1);
   *(short *)(puVar2 + 1) = (short)param_7;
