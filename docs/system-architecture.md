@@ -51,7 +51,7 @@ This section provides a detailed analysis of the primary gameplay connection, wh
 
 ### Incoming (SMSG) Packet Processing:
 
-1.  **Framing & Initial Processing (`Msg::DispatchStream`):** All incoming `gs2c` raw byte streams are managed by [`Msg::DispatchStream`](raw_decompilations/smsg/Msg_DispatchStream.c). This central function is responsible for reading from the network ring buffer, identifying message frames, and performing initial processing (decryption, decompression) to yield plaintext messages.
+1.  **Framing & Initial Processing (`MsgConn_Dispatch`):** All incoming `gs2c` raw byte streams first enter [`MsgConn_Dispatch`](raw_decompilations/smsg/MsgConn_Dispatch.c). This function is responsible for reading from the network ring buffer, identifying message frames, and performing initial processing (decryption, decompression) to yield plaintext messages. This also includes the initial connection handshake handled by functions like [`MsgConn_ClientRecvEncrypt.c`](raw_decompilations/smsg/MsgConn_ClientRecvEncrypt.c). Once framed, individual messages are then passed to [`Msg::DispatchStream`](raw_decompilations/smsg/Msg_DispatchStream.c) for further processing.
 
 2.  **Dispatch Type Evaluation:** For each message, `Msg::DispatchStream` retrieves its `Handler Info` structure. A key field in this structure is the "Dispatch Type" (`HandlerInfo+0x10`), which dictates the processing path:
     *   **Dispatch Type `0` (Generic Path):** For most packets. Leads to schema-driven parsing.
