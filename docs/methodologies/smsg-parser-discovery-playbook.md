@@ -21,6 +21,32 @@ The client's incoming message handling is a multi-stage, dynamic process.
 2.  **`MsgUnpack::ParseWithSchema`:** A schema "virtual machine" called by the dispatcher to parse raw bytes into a structured data tuple.
 3.  **Dynamic Post-Parse Handlers:** Crucially, there is **no single master handler**. After parsing, `Msg::DispatchStream` calls a function pointer that is resolved at runtime. This means different handlers can be active depending on the game's state. `Portal::DispatchMessage` is just one of these many possible handlers.
 
+## Key Code Signatures for Dynamic Analysis
+
+To reliably find the correct locations for dynamic analysis after a game update, we use the following code signatures. These can be used with a memory scanner to find the new addresses.
+
+### SMSG Dynamic Handler Dispatch (`call rax`)
+
+This is the most important location for SMSG analysis. It is the instruction that calls the dynamically resolved post-parse handler. Placing a breakpoint here allows capturing the handler address from the `RAX` register.
+
+* **Last Known Address:** `"Gw2-64.exe"+FD1ACD`
+* **Byte Signature (Pattern):** `48 8B 41 18 41 8B 0C 24 48 8B 55 E8 FF D0`
+* **Assembly Context:**
+
+  ```assembly
+  mov rax,[rcx+18]      ; Load handler function pointer into RAX
+  mov ecx,[r12]         ; Load first argument for handler
+  mov rdx,[rbp-18]      ; Load second argument (pointer to parsed data)
+  call rax              ; Execute the handler
+  ```
+
+### SMSG Schema Parser Call
+
+This is the instruction that calls the schema VM to parse the raw packet data. Placing a breakpoint here allows capturing the schema address.
+
+* **Last Known Address:** `"Gw2-64.exe"+FD1A47`
+* **Assembly Context:** `call MsgUnpack::ParseWithSchema`
+
 ## Workflow: Dynamic Analysis First
 
 ### Phase 1: Identify the True Post-Parse Handler
