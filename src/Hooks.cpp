@@ -18,7 +18,7 @@ namespace kx {
 
             std::cout << "Scanning for MsgSend pattern..." << std::endl;
             std::optional<uintptr_t> msgSendAddrOpt = kx::PatternScanner::FindPattern(
-                std::string(kx::MSG_SEND_PATTERN),
+                std::string(kx::MSG_CONN_FLUSH_PACKET_BUFFER_PATTERN),
                 std::string(kx::TARGET_PROCESS_NAME)
             );
 
@@ -50,7 +50,7 @@ namespace kx {
 
             std::cout << "Scanning for MsgDispatch pattern..." << std::endl;
             std::optional<uintptr_t> msgDispatchAddrOpt = kx::PatternScanner::FindPattern(
-                std::string(kx::MSG_DISPATCH_PATTERN), // Use dispatcher pattern
+                std::string(kx::MSG_DISPATCH_STREAM_PATTERN), // Use dispatcher pattern
                 std::string(kx::TARGET_PROCESS_NAME)
             );
 
