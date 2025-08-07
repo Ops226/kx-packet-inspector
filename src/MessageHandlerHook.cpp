@@ -72,6 +72,11 @@ void hookHandlerCallSite(SafetyHookContext& ctx)
             return;
         }
 
+        // Get the handler function pointer from the HandlerInfo structure.
+        void* handlerFuncPtr = *reinterpret_cast<void**>(
+            static_cast<char*>(handlerInfoPtr) + kx::GameStructs::HANDLER_INFO_HANDLER_FUNC_PTR_OFFSET // Offset 0x18
+        );
+
         // Read the message identifier (Opcode) from the handler info structure.
         uint16_t messageId = *reinterpret_cast<uint16_t*>(
             static_cast<char*>(handlerInfoPtr) + kx::GameStructs::HANDLER_INFO_MSG_ID_OFFSET // Offset 0x00
@@ -97,6 +102,17 @@ void hookHandlerCallSite(SafetyHookContext& ctx)
             sprintf_s(buffer, sizeof(buffer), "[hookHandlerCallSite] Error: messageDataPtr is NULL but messageSize is %u. Skipping.\n", messageSize);
             OutputDebugStringA(buffer);
             return;
+        }
+
+        // Log the handler address along with the other packet info.
+        // We can pass this new pointer to our PacketProcessor.
+        // For now, let's just log it to the debug output to prove it works.
+        if (handlerFuncPtr) {
+            char buffer[256];
+            uintptr_t gameBase = (uintptr_t)GetModuleHandle(L"Gw2-64.exe");
+            uintptr_t handlerOffset = (uintptr_t)handlerFuncPtr - gameBase;
+            sprintf_s(buffer, sizeof(buffer), "[Packet Discovery] Opcode: 0x%04X -> Handler: Gw2-64.exe+%p\n", messageId, (void*)handlerOffset);
+            OutputDebugStringA(buffer);
         }
 
         kx::PacketProcessing::ProcessDispatchedMessage(
