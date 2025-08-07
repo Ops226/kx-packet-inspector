@@ -1,8 +1,15 @@
-
 /* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
-
+// Purpose: A central handler for "Game Commands" (GcGameCmd).
+// It dispatches based on a command ID (param_1) to various code paths,
+// managing the lifecycle of the GcGameCmd system.
+//
+// Key actions:
+// - Initializes global data based on command ID.
+// - Can involve complex setup routines for game command system.
+// - Handles cleanup/shutdown of the GcGameCmd system.
+// - Calls MsgConn::ProcessIncomingRawData (FUN_14023d1c0) for specific commands.
+// - Asserts with "D:\\Perforce\\Live\\NAEU\\v2\\Code\\Gw2\\Game\\Net\\Cli\\GcGameCmd.cpp".
 void GcGameCmd::Handler(int param_1,undefined8 param_2,uint param_3,byte *param_4)
-
 {
   undefined *puVar1;
   undefined1 auStackY_1f8 [32];

@@ -1,6 +1,12 @@
-
+// Purpose: A top-level dispatcher for "Game Server" (GcSrv) related commands.
+// It dispatches based on a command ID (param_2) to various code paths,
+// often leading to client-side actions or even outgoing packets.
+//
+// Key actions:
+// - Calls GcGameCmd::Handler for specific commands, showing a command hierarchy.
+// - Can directly queue outgoing packets (e.g., via MsgConn::QueuePacket).
+// - Asserts with "D:\\Perforce\\Live\\NAEU\\v2\\Code\\Gw2\\Game\\Net\\Cli\\GcSrv.cpp".
 void GcSrv::Dispatch(longlong param_1,int *param_2,undefined8 param_3,undefined8 param_4)
-
 {
   uint uVar1;
   int iVar2;
