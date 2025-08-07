@@ -14,8 +14,8 @@ The three primary protocols and their corresponding server systems are:
     *   **Lifecycle:** Established only during the initial client startup and character selection.
     *   **Hand-off Mechanism:** Its final task is to provide the client with the specific network coordinates (IP address and port) of the Game Server and Platform Server to which it should connect for the gameplay session.
 
-2.  **Platform Server (`ps2c`/`c2ps`) - The "Portal":**
-    *   **Purpose:** Manages all account-level services, social features, and commercial interactions. This includes character inventory/wallet, achievements, friends lists, guilds, LFG, the Trading Post, and the Gem Store.
+2.  **Platform / Portal Server (`ps2c`/`c2ps`):**
+    *   **Purpose:** Manages all account-level services, social features, and commercial interactions. This includes character inventory/wallet, achievements, friends lists, guilds, LFG, the Trading Post, and the Gem Store. This is also referred to as the **Secure Token Server (STS)**.
     *   **Client Components:** `PortalCli` ([`PortalCli_Constructor.c`](raw_decompilations/cmsg/portal/PortalCli_Constructor.c), [`PortalCli_Auth.c`](raw_decompilations/cmsg/portal/PortalCli_Auth.c)), `GcPortal` ([`GcPortal_Router.c`](raw_decompilations/cmsg/portal/GcPortal_Router.c)).
     *   **Traffic Examples:** `REQ /Group/GroupInfo`, `/Presence/UserInfo`, `/Game.com.Wallet/WalletInfo`, `MailMsg`, `ChMsg`.
     *   **Lifecycle:** Established after login and remains active in parallel with the Game Server connection throughout the gameplay session.
@@ -32,6 +32,15 @@ The three primary protocols and their corresponding server systems are:
 3.  Login Server sends connection details for Game and Platform Servers.
 4.  Client disconnects from Login Server.
 5.  Client establishes simultaneous, persistent connections to both the Game Server (`c2gs`) and Platform Server (`c2ps`).
+
+---
+
+## Core Concepts & Game Internals
+
+Before diving into the protocol details, it is helpful to understand some core concepts about how the game functions.
+
+*   **[Core Game Concepts](./game-concepts.md):** Explanations of fundamental mechanics like the server tick rate, network bubble, and lag compensation.
+*   **[Coordinate Systems & Units](./coordinate-systems.md):** A detailed breakdown of the different coordinate systems and the crucial 1:32 unit conversion factor.
 
 ---
 
@@ -73,4 +82,3 @@ This connection handles all non-real-time, account-specific interactions. See th
 *   **Key Functions:**
     *   [`Portal::DispatchMessage`](raw_decompilations/smsg/Portal_DispatchMessage.c): The central `switch` statement that routes incoming Portal messages.
     *   [`Portal::DynamicHandler_Entry`](raw_decompilations/smsg/Portal_DynamicHandler_Entry.c): The entry point called by the main network layer to hand off messages to the Portal system.
-
