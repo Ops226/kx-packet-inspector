@@ -73,6 +73,8 @@ Now, switch to your static analysis tool (Ghidra).
 1.  **Decode the Schema:** Navigate to the schema's data address in Ghidra. Use the typecode definitions from `system-architecture.md` to determine the exact layout of the packet's parsed data.
 2.  **Analyze Handler Logic:** With the schema structure known, analyze the decompiled code of the handler function you discovered. This will reveal the semantic meaning of the packet's fields by observing how the handler uses the parsed data.
 
+    **Note on Fast Path Handlers:** For high-frequency packets that use the "Fast Path" (like `SMSG_AGENT_UPDATE_BATCH`), the dynamically discovered handler (e.g., `Event::PreHandler_Stub_0x88`) is a *notification stub* that is called *after* the packet has already been parsed by hardcoded logic inside `Msg::DispatchStream`. Do not look for parsing logic in these stubs; it resides in the dispatcher itself.
+
 ### Phase 4: Document Your Findings
 
 1.  **Create a New Packet Document:** Create a new `.md` file in the `packets/smsg/` directory for the opcode or unique identifier you are analyzing.

@@ -62,7 +62,7 @@ This section provides a detailed analysis of the primary gameplay connection, wh
 
 4.  **Handler Execution:**
     *   **Generic Handler Dispatch:** `Msg::DispatchStream` calls the handler function pointer (from `HandlerInfo+0x18`), passing it the parsed data tuple. (e.g., [`Marker::Cli::ProcessAgentMarkerUpdate`](raw_decompilations/smsg/Marker_Cli_ProcessAgentMarkerUpdate.c)).
-    *   **Fast Path Notification:** After internal processing, `Msg::DispatchStream` calls a notification stub (e.g., [`Event::PreHandler_Stub_0x88`](raw_decompilations/common/event_system/Event_PreHandler_Stub_0x88.c)) which may queue a new event via [`Event::Factory_QueueEvent`](raw_decompilations/common/event_system/Event_Factory_QueueEvent.c).
+    *   **Fast Path Notification (Decoupled Event):** After the hardcoded parsing and state updates are completed *inside* `Msg::DispatchStream`, a notification stub (e.g., [`Event::PreHandler_Stub_0x88`](raw_decompilations/common/event_system/Event_PreHandler_Stub_0x88.c)) is called. This stub does not process packet data itself; its role is to queue a generic, post-facto event using the [`Event::Factory_QueueEvent`](raw_decompilations/common/event_system/Event_Factory_QueueEvent.c) system, informing other game systems that an update has occurred.
 
 ### Outgoing (CMSG) Packet Processing:
 
