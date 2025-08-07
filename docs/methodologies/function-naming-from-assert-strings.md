@@ -36,9 +36,11 @@ This is the manual process for a single function.
 
 Manually checking every function is impractical. A Ghidra script (Python/Jython) can automate this process and name thousands of functions in minutes.
 
+*   **[Ghidra Script: `NameFunctionsFromAssertPaths.py`](../../tools/ghidra/NameFunctionsFromAssertPaths.py)**
+
 The script's logic would be:
 
-1.  **Find All Assert Strings:** Iterate through all defined strings in the `.rdata` section and use a regular expression to find any string that matches the pattern `D:\\Perforce\\...`.
+1.  **Find All Assert Strings:** Iterate through all defined strings in the `.rdata` section and use a regular expression to find any string that matches the pattern `D:\Perforce\...`.
 2.  **Get Cross-References:** For each file path string found, get a list of all functions that reference it.
 3.  **Parse and Name:**
     *   Parse the file path to extract key architectural tokens (e.g., `Game`, `Marker`, `Cli`, `MkrCliContext`).
