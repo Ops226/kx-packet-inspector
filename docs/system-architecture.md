@@ -56,6 +56,8 @@ This section provides a detailed analysis of the primary gameplay connection, wh
 *   **High-Level Dispatchers:**
     *   [`GcSrv::Dispatch`](raw_decompilations/smsg/GcSrv_Dispatch.c): A top-level dispatcher for commands originating from the game server's perspective, often leading to client-side actions or even outgoing packets.
     *   [`GcGameCmd::Handler`](raw_decompilations/cmsg/GcGameCmd_Handler.c): A central handler for "Game Commands" that manages the lifecycle of the `GcGameCmd` system and can process incoming raw data.
+    *   [`GcGameCmd_HandleGameSrvEncryptCallbackResult.c`](raw_decompilations/cmsg/GcGameCmd_HandleGameSrvEncryptCallbackResult.c): Handles the result of a Game Server Encryption Callback, processing the outcome (success or failure) of the encryption-related operation.
+    *   [`GcGameCmd_InitializeState.c`](raw_decompilations/cmsg/GcGameCmd_InitializeState.c): A configuration routine for setting up the internal state of the `GcGameCmd` system.
 
 2.  **Dispatch Type Evaluation:** For each message, `Msg::DispatchStream` retrieves its `Handler Info` structure. A key field in this structure is the "Dispatch Type" (`HandlerInfo+0x10`), which dictates the processing path:
     *   **Dispatch Type `0` (Generic Path):** For most packets. Leads to schema-driven parsing.
