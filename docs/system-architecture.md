@@ -13,7 +13,7 @@ The unified process is as follows:
 3.  **Incoming (SMSG) - Dynamic Handler Dispatch:** After parsing, `Msg::DispatchStream` retrieves a dynamically resolved function pointer (e.g., from `[[MsgConn+0x48]+0x18]`) and calls it, passing the parsed data tuple. There is **no single, master switch statement**; the handler can vary based on connection context or message content.
 4.  **Outgoing (CMSG) - Game Logic Initiates:** A high-level game logic function (e.g., character movement, skill usage) initiates the process by preparing data for a packet.
 5.  **Outgoing (CMSG) - Packet Building:** The game logic calls `MsgConn::BuildPacketFromSchema`, providing the packet's schema and the data to be serialized. This function internally uses `Msg::MsgPack` (the CMSG counterpart to the SMSG parser) to write the data into a packet buffer.
-6.  **Outgoing (CMSG) - Queueing for Send:** The completed packet buffer is then passed to a queueing function (e.g., `MsgConn::QueuePacket`), which places it in a thread-safe queue to be sent by the network thread.
+6.  **Outgoing (CMSG) - Queueing for Send:** The completed packet is then passed to a queueing function (e.g., `MsgConn::QueuePacket`), which places it in a thread-safe queue to be sent by the network thread.
 
 ## Key Components
 
@@ -41,6 +41,7 @@ The unified process is as follows:
 *   **`Gs2c_PostParseDispatcher` (see `raw_decompilations/smsg/Gs2c_PostParseDispatcher.c`):** This is understood to be **one of many possible dynamic post-parse handlers**. It is not the universal destination for all packets and handles a specific subset of application-level messages.
 
 ### 4. Outgoing Packet Builder (`MsgConn::BuildPacketFromSchema`)
+*   **Function:** `FUN_140fd4c10` (Proposed Name: `MsgConn::BuildPacketFromSchema`)
 *   **Role:** This is the primary utility function for constructing outgoing packets. It takes a schema and raw data, then serializes the data into a buffer.
 *   **Internal Call:** It internally uses `FUN_140fd2c70` (Proposed Name: `Msg::MsgPack`) which acts as the CMSG-specific schema serialization engine.
 
@@ -48,7 +49,7 @@ The unified process is as follows:
 *   **Role:** Takes a fully constructed packet buffer and its opcode, and places it into a thread-safe queue.
 *   **Internal Call:** It calls `FUN_141051690` (Proposed Name: `MsgConn::EnqueuePacket`) which performs the low-level queueing operations.
 
-## Packet Flow Examples (Confirmed via Dynamic Analysis)
+## Packet Flow Examples (Confirmed via Dynamic Analysis & Dual Paths)
 
 ### Incoming (SMSG) Example: Message with `FE 03` Prefix
 
@@ -59,20 +60,40 @@ The handling of a message whose parsed tuple begins with `FE 03` illustrates the
 3.  **Dynamic Handling:** `Msg::DispatchStream` retrieves a function pointer from its dispatch object (`mov rax,[rcx+18]`). In this live context, the pointer is the address of `FUN_1413e5d90` (`Marker::Cli::ProcessAgentMarkerUpdate`).
 4.  **Execution:** The dispatcher calls the pointer (`call rax` at `"Gw2-64.exe"+FD1ACD`). `Marker::Cli::ProcessAgentMarkerUpdate` then executes, reading fields from the data tuple to carry out its logic.
 
-### Outgoing (CMSG) Example: Agent Link (`0x0036`)
+### Outgoing (CMSG) Pathways
 
-This illustrates the CMSG construction and sending process:
+The client uses two distinct pathways for sending CMSG packets, optimized for different types of traffic:
 
-1.  **Game Logic:** A high-level game logic function (e.g., `FUN_140245390`, proposed `CMSG::BuildAgentLink`) is called to prepare an Agent Link packet.
-2.  **Packet Building:** It calls `MsgConn::BuildPacketFromSchema` (`FUN_140fd4c10`), providing the schema `DAT_142513080` and the packet data.
-3.  **Serialization:** `MsgConn::BuildPacketFromSchema` uses `Msg::MsgPack` (`FUN_140fd2c70`) to serialize the data into the internal packet buffer.
-4.  **Queueing:** The constructed packet is passed to `MsgConn::QueuePacket` (`FUN_14104d760`) along with its opcode `0x0036`.
-5.  **Sending:** `MsgConn::QueuePacket` then calls `MsgConn::EnqueuePacket` (`FUN_141051690`) to place the packet in the send queue.
+#### Pathway 1: The "Buffered" Stream (High-Frequency Data)
+
+This pathway is used for continuous, high-frequency, or aggregated data such as **player movement (0x0004, 0x0012, 0x000B), skill usage (0x0017), or mount movement (0x0018)**. Data is written into a buffer, which is periodically flushed.
+
+1.  **Game Logic:** High-frequency game logic directly calls `MsgConn::WriteToPacketBuffer` to append data.
+2.  **Buffering:** `MsgConn::WriteToPacketBuffer` writes bytes into a common packet buffer managed by `MsgConn`.
+3.  **Flushing:** When the buffer is full, a logical packet is complete, or a timer expires, `MsgConn::FlushPacketBuffer` is called. This function prepares the buffered data for the next stage.
+4.  **Serialization & Sending:** The actual serialization and sending logic (likely `Msg::MsgPack` and `MsgConn::QueuePacket`) occurs within the `MsgConn::FlushPacketBuffer`'s downstream calls, processing the accumulated buffer.
+
+#### Pathway 2: The "Direct Queue" (Discrete, High-Priority Events)
+
+This pathway is used for single, discrete events that need to be sent immediately (e.g., **heartbeats (0x0005), agent links (0x0036)).
+
+1.  **Game Logic:** Game logic (e.g., `CMSG::BuildAgentLink`) prepares the data for a specific, single packet.
+2.  **Packet Building:** It calls `MsgConn::BuildPacketFromSchema` (`FUN_140fd4c10`), providing the schema and raw data.
+3.  **Direct Queueing:** The constructed packet is then directly passed to `MsgConn::QueuePacket` (`FUN_14104d760`) along with its opcode.
+4.  **Sending:** `MsgConn::QueuePacket` (which calls `MsgConn::EnqueuePacket`) places the packet directly into the thread-safe send queue.
+
+**Example: Agent Link (`0x0036`)**
+
+`CMSG::BuildAgentLink` uses Pathway 2. It calls `MsgConn::BuildPacketFromSchema`, then `MsgConn::QueuePacket` (which calls `MsgConn::EnqueuePacket`).
+
+**Example: Heartbeat (`0x0005`)**
+
+The constant `0x0005` heartbeat uses Pathway 2. It directly calls `MsgConn::QueuePacket` with its opcode and an empty payload.
 
 ## Implications for Reverse Engineering
 
 *   **Dynamic Analysis is Required for Handlers:** Static analysis alone is insufficient. The only reliable way to find the correct SMSG handler for a specific packet is to use a debugger (like Cheat Engine) to trace execution and identify which post-parse function is actually called.
-*   **CMSG Discovery is Reference-Based:** CMSG packets are discovered by finding cross-references to `MsgConn::BuildPacketFromSchema`.
+*   **CMSG Discovery is Dual-Path:** CMSG packets must be discovered by observing both the "Buffered" and "Direct Queue" pathways to get full coverage.
 *   **The Schema is Still King:** For both SMSG and CMSG, the schema remains the authoritative source for the packet's on-wire structure. However, discovering which schema applies to a given packet requires tracing.
 *   **The System is Highly Context-Driven:** The client's ability to dynamically swap handlers and build packets via centralized logic means the meaning and processing of packets can change depending on the game's state.
 
