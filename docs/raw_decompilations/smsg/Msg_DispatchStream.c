@@ -47,7 +47,8 @@ LAB_140fd1e34:
     }
     if (*(longlong *)(param_2 + 0x48) == 0) {
       local_res10[0] = 0;
-      uVar8 = FUN_140fd70a0((longlong)pbVar1,2,4,(undefined1 (*) [32])local_res10,0);
+      uVar8 = Arena::Core::Collections::Array
+                        ((longlong)pbVar1,2,4,(undefined1 (*) [32])local_res10,0);
       if ((int)uVar8 != 0) {
         uVar8 = FUN_140fd5b90(*(longlong *)(param_2 + 0x18),local_res10[0]);
         if ((int)uVar8 != 0) {
@@ -61,8 +62,9 @@ LAB_140fd1e34:
         }
         FUN_140fd5b70(*(longlong *)(param_2 + 0x18),*param_3,*(undefined4 *)(param_2 + 0x40));
                     /* WARNING: Subroutine does not return */
-        FUN_1409adab0(0,0x1420de8e0,(ulonglong)*(uint *)(param_2 + 0x10),
-                      (ulonglong)*(uint *)(param_2 + 0x40));
+        Arena::Core::Platform::Common::Log
+                  (0,0x1420de8e0,(ulonglong)*(uint *)(param_2 + 0x10),
+                   (ulonglong)*(uint *)(param_2 + 0x40));
       }
       goto LAB_140fd1e34;
     }
@@ -94,7 +96,7 @@ LAB_140fd1e34:
       puVar10 = *(ushort **)(param_2 + 0xc0);
       uVar7 = *(uint *)(*(longlong *)(*(longlong *)(param_2 + 0x48) + 8) + 0x20);
       local_48 = puVar11;
-      local_50 = (ulonglong *)FUN_140fd6d70(*(uint **)(param_2 + 200),uVar7);
+      local_50 = (ulonglong *)Arena::Core::Collections::Array(*(uint **)(param_2 + 200),uVar7);
       local_68[0] = 0;
       local_res10[0] = 0xffffffff;
       puVar15 = MsgUnpack::ParseWithSchema
@@ -144,7 +146,7 @@ LAB_140fd1e34:
                               *(undefined4 *)
                                (*(longlong *)(*(undefined4 **)(param_2 + 0x48) + 2) + 0x10),
                               local_res10[0],uVar12);
-          FUN_140fd6ef0((longlong)pbVar1,uVar12 - (int)local_58);
+          Gw2::Services::Msg::MsgUtil((longlong)pbVar1,uVar12 - (int)local_58);
           FUN_140fd6ee0((undefined8 *)(param_2 + 0xa8));
           goto LAB_140fd1cd8;
         }
@@ -171,7 +173,7 @@ LAB_140fd1dda:
     puVar11 = (ushort *)((ulonglong)*(uint *)(param_2 + 0xa0) + *(longlong *)(param_2 + 0x88));
     uVar12 = *(uint *)(*(longlong *)(*(longlong *)(param_2 + 0x48) + 8) + 0x20);
     local_58 = puVar11;
-    local_50 = (ulonglong *)FUN_140fd6d70(*(uint **)(param_2 + 200),uVar12);
+    local_50 = (ulonglong *)Arena::Core::Collections::Array(*(uint **)(param_2 + 200),uVar12);
     puVar5 = local_40;
     local_res20[0] = 0;
     local_res10[0] = 0xffffffff;
@@ -223,7 +225,7 @@ LAB_140fd1dc5:
       iVar6 = (**(code **)(lVar3 + 0x18))(*param_3,local_50);
     }
     if (iVar6 == 0) goto LAB_140fd1dda;
-    FUN_140fd6ef0((longlong)pbVar1,uVar12);
+    Gw2::Services::Msg::MsgUtil((longlong)pbVar1,uVar12);
     thunk_FUN_140fd6360(*(undefined4 *)(param_2 + 0x10),**(undefined4 **)(param_2 + 0x48),
                         *(undefined4 *)(*(longlong *)(*(undefined4 **)(param_2 + 0x48) + 2) + 0x10),
                         local_res10[0],uVar12);
