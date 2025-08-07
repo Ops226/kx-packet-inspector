@@ -6,27 +6,27 @@ This document details the practical implementation of the packet hooking mechani
 
 ### Outgoing (CMSG)
 
-*   **Method:** MinHook entry point hook on the `MsgSend` function.
+*   **Method:** MinHook entry point hook on the `MsgConn::FlushPacketBuffer` function.
 *   **Data:** Reads from a `MsgSendContext` structure to get the plaintext buffer before potential encryption.
 *   **Status:** Stable and functional.
 
 ### Incoming (SMSG)
 
-*   **Method:** SafetyHook mid-function hook (`MidHook`) inside the main message dispatcher function, `Msg::DispatchStream` (also referred to as `Msg::DispatchStream` in some contexts).
-*   **Target:** The hook specifically targets the `MOV RDX, [RBP+STACK_OFFSET_MESSAGE_DATA_PTR]` instruction at multiple offsets within the function. This instruction is responsible for loading the pointer to the message data just before the handler function is called.
-*   **Data Extraction:** The hook uses the `SafetyHookContext` to read registers (`RBX` and `RBP`) to get pointers to the connection context (`pMsgConn`) and the message data. From there, it dereferences pointers using the known structure layouts to extract the message ID, size, and payload.
-*   **Status:** Functional and captures plaintext messages from all identified call paths within the main dispatcher. **Note:** This method's reliance on a hardcoded stack offset (`[RBP - 0x18]`) is potentially fragile and may break with future game updates.
+*   **Method:** SafetyHook mid-function hook (`MidHook`) inside the main message dispatcher function, `Msg::DispatchStream`.
+*   **Target:** The hook specifically targets multiple `MOV RDX, [RBP+STACK_OFFSET_MESSAGE_DATA_PTR]` instructions at various offsets within the function. These instructions are responsible for loading the pointer to the message data just before the handler function is called.
+*   **Data Extraction:** The hook uses the `SafetyHookContext` to read registers (`RBX` for connection context and `RBP` for stack-relative data pointer) to get pointers to the connection context (`pMsgConn`) and the message data. From there, it dereferences pointers using the known structure layouts to extract the message ID, size, and payload.
+*   **Status:** Functional and captures plaintext messages from all identified call paths within the main dispatcher. **Note:** This method's reliance on a hardcoded stack offset (`[RBP - 0x18]`) is potentially fragile and may break with game updates.
 
 ## Target Functions
 
 Function signatures are provided to help locate these functions after a game update.
 
-### Outgoing Packets (MsgSend)
+### Outgoing Packets (`MsgConn::FlushPacketBuffer`)
 
 *   **Purpose:** Prepares outgoing packets for sending.
 *   **Signature:** `40 ? 48 83 EC ? 48 8D ? ? ? 48 89 ? ? 48 89 ? ? 48 89 ? ? 4C 89 ? ? 48 8B ? ? ? ? ? 48 33 ? 48 89 ? ? 48 8B ? E8`
 
-### Incoming Packets (Msg::DispatchStream)
+### Incoming Packets (`Msg::DispatchStream`)
 
 *   **Internal Name:** `Msg::DispatchStream` (previously known as `Gs2c_SrvMsgDispatcher`)
 *   **Purpose:** Processes a buffer of one or more decrypted, framed messages and calls the appropriate handler for each.
@@ -61,7 +61,7 @@ This 32-byte structure contains information about the message and its handler.
 
 ## Toolchain
 
-*   **Hooking:** MinHook, SafetyHook
+*   **Hooking:** MinHook (for entry-point hooks), SafetyHook (for mid-function hooks)
 *   **Reverse Engineering:** Ghidra, IDA Pro
 *   **Memory Analysis:** Cheat Engine, ReClass.NET
 *   **Debugging:** Visual Studio Debugger
