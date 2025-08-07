@@ -13,21 +13,21 @@ Instead of a single handler, this packet uses a multi-stage dispatch system. The
 
 The conclusion that this is a container packet is based on several key pieces of evidence from dynamic analysis:
 
-1.  **Multiple Dynamic Handlers:** Live debugging shows that opcode `0x0001` is dispatched to at least six different handler functions (e.g., `FUN_141017dd0`, `FUN_141018580`, `FUN_1410180f0`, etc.).
+1.  **Multiple Dynamic Handlers:** Live debugging shows that opcode `0x0001` is dispatched to at least six different pre-handler functions.
 2.  **Variable Payload Sizes:** Captured logs show this packet with many different sizes (9, 14, 25, 26, 38, 44, 62 bytes), which is inconsistent with a single, fixed-structure packet.
-3.  **"Fast Path" Execution:** The packet's processing bypasses the generic `MsgUnpack::ParseWithSchema` function, indicating a highly optimized, custom parsing path is used. The handlers themselves do not parse the data, suggesting they are part of a larger dispatch chain.
+3.  **"Fast Path" Execution:** The packet's processing bypasses the generic `MsgUnpack::ParseWithSchema` function, indicating a highly optimized, custom parsing path is used. The pre-handlers themselves do not parse the data, suggesting they are part of a larger dispatch chain.
 
 ## The Full Dispatch Flow
 
 The processing of this packet is a complex, multi-stage process designed for high performance:
 
-1.  **`Msg::DispatchStream` (Initial Dispatch):** The main dispatcher identifies opcode `0x0001`. It performs a minimal parse of the payload to extract a **subtype ID**. Based on this subtype, it calls the appropriate "Pre-Handler Stub."
+1.  **`Msg::DispatchStream` (Initial Dispatch):** The main dispatcher identifies opcode `0x0001`. It performs a minimal parse of the payload to extract a **subtype ID**. Based on this subtype, it calls the appropriate pre-handler stub.
 
-2.  **Pre-Handler Stub (e.g., `FUN_1410180f0`):** These are extremely simple wrapper functions. Their only purpose is to call the central Event Factory, `FUN_1409bfc20`, passing it a hardcoded **sub-opcode**. They do not read the packet payload.
+2.  **Pre-Handler Stub (e.g., `Event::PreHandler_Stub_0x88`):** These are extremely simple wrapper functions. Their only purpose is to call the central Event Factory, `Event::Factory_QueueEvent`, passing it a hardcoded **sub-opcode**. They do not read the packet payload.
 
-3.  **Event Factory (`FUN_1409bfc20`):** This function receives the sub-opcode and creates a generic internal "event" object.
+3.  **Event Factory (`Event::Factory_QueueEvent`):** This function receives the sub-opcode and creates a generic internal "event" object.
 
-4.  **Event Dispatcher (`FUN_1409c0100`):** This function takes the newly created event object and its sub-opcode. It uses the sub-opcode as an index into a **Master Event Handler Table** (`DAT_14263eb60`) to find the *real* handler for that specific event.
+4.  **Event Dispatcher (`Event::Dispatcher_ProcessEvent`):** This function takes the newly created event object and its sub-opcode. It uses the sub-opcode as an index into a **Master Event Handler Table** (`DAT_14263eb60`) to find the *real* handler for that specific event.
 
 5.  **Master Event Handler Table (`DAT_14263eb60`):** This is a large, global array of pointers. Critically, it is **populated at runtime** during the game's initialization, making its contents invisible to simple static analysis of the executable file.
 
@@ -39,12 +39,12 @@ Our static analysis of the pre-handler stubs provides a definitive mapping of wh
 
 | Pre-Handler Stub Function | Hardcoded Sub-Opcode |
 | :--- | :--- |
-| `FUN_141017dd0` | `0xD0` |
-| `FUN_141018580` | `0x78` |
-| `FUN_1410180f0` | `0x88` |
-| `FUN_141018c20` | `0xC0` |
-| `FUN_141016fb0` | `0xC0` |
-| `FUN_1410172d0` | `0x70` |
+| `Event::PreHandler_Stub_0xD0` | `0xD0` |
+| `Event::PreHandler_Stub_0x78` | `0x78` |
+| `Event::PreHandler_Stub_0x88` | `0x88` |
+| `Event::PreHandler_Stub_0xC0` | `0xC0` |
+| `Event::PreHandler_Stub_0xC0_b` | `0xC0` |
+| `Event::PreHandler_Stub_0x70` | `0x70` |
 
 ## Hypothesized Payload Structure
 
@@ -80,3 +80,9 @@ The definitive next step to fully reverse engineer this packet is:
 2.  **Set a hardware write breakpoint** on a specific slot in the live memory map for the table (e.g., `LiveBase + OffsetOfTable + (0x88 * 8)`).
 3.  This breakpoint will trigger on the exact instruction within the **Master Event Registration Function** that populates the table.
 4.  Analyzing this registration function in Ghidra will allow for a complete, static mapping of all sub-opcodes to their real handler functions, finally revealing the parsing logic for every event type.
+
+## Supporting Evidence (Decompilations)
+
+*   `docs/raw_decompilations/common/event_system/Event_PreHandler_Stub_0x88.c`
+*   `docs/raw_decompilations/common/event_system/Event_Factory_QueueEvent.c`
+*   `docs/raw_decompilations/common/event_system/Event_Dispatcher_ProcessEvent.c`
