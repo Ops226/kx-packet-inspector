@@ -17,6 +17,7 @@ The three primary protocols and their corresponding server systems are:
 2.  **Platform / Portal Server (`ps2c`/`c2ps`):**
     *   **Purpose:** Manages all account-level services, social features, and commercial interactions. This includes character inventory/wallet, achievements, friends lists, guilds, LFG, the Trading Post, and the Gem Store. This is also referred to as the **Secure Token Server (STS)**.
     *   **Client Components:** `PortalCli` ([`PortalCli_Constructor.c`](raw_decompilations/cmsg/portal/PortalCli_Constructor.c), [`PortalCli_Auth.c`](raw_decompilations/cmsg/portal/PortalCli_Auth.c)), `GcPortal` ([`GcPortal_Router.c`](raw_decompilations/cmsg/portal/GcPortal_Router.c)).
+    *   **Web Interface Integration:** [`ArenaWeb_RegisterApiEndpoints.c`](raw_decompilations/web_interface/ArenaWeb_RegisterApiEndpoints.c) - This function registers native game functions as API endpoints for the embedded web browser (e.g., Trading Post, Gem Store), allowing JavaScript to call into the game's C++ code.
     *   **Traffic Examples:** `REQ /Group/GroupInfo`, `/Presence/UserInfo`, `/Game.com.Wallet/WalletInfo`, `MailMsg`, `ChMsg`.
     *   **Lifecycle:** Established after login and remains active in parallel with the Game Server connection throughout the gameplay session.
 

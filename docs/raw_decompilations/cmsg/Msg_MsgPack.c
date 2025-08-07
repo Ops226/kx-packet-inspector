@@ -629,7 +629,7 @@ LAB_140fd315e:
          ((uVar12 >> 0x10 & 1) != 0)) {
         *puVar1 = (uint)*pbVar10;
       }
-      FUN_140fd0d80(param_2,(uint)local_f8[1],(undefined8 *)pbVar10,1);
+      WriteDataToBuffer(param_2,(uint)local_f8[1],(undefined8 *)pbVar10,1);
       *param_4 = *param_4 + 8;
       *param_6 = *param_6 + (uint)local_f8[1];
       break;
@@ -658,7 +658,7 @@ LAB_140fd315e:
          ((uVar12 >> 0x10 & 1) != 0)) {
         *puVar1 = (uint)*pbVar10;
       }
-      FUN_140fd0d80(param_2,(uint)(ushort)local_f0,(undefined8 *)pbVar10,1);
+      WriteDataToBuffer(param_2,(uint)(ushort)local_f0,(undefined8 *)pbVar10,1);
       *param_4 = *param_4 + 8;
       *param_6 = *param_6 + (uint)(ushort)local_f0;
       break;
