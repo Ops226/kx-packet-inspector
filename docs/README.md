@@ -4,6 +4,12 @@ Welcome to the official documentation for the KX Packet Inspector project.
 
 This repository aims to provide a powerful tool for understanding and analyzing network communication in Guild Wars 2. This documentation serves as a central hub for all reverse engineering findings, methodologies, and technical insights gained during the development of this tool.
 
+## Network Protocol Flow Diagram
+
+For a high-level visual overview of the client's network communication with the Game Server, refer to the diagram below:
+
+![Network Protocol Flow Diagram](../images/network_protocol_flow.png)
+
 ## Core Documentation
 
 *   **[System Architecture](./system-architecture.md):** A high-level overview of the entire network message processing system, covering the three-server architecture (Login, Platform, Game) and detailing both incoming (SMSG) and outgoing (CMSG) packet pipelines.

@@ -2,6 +2,12 @@
 
 **Status:** Confirmed (Validated Multi-Protocol Architecture, In-Depth Client-Side Analysis)
 
+## Network Protocol Flow Diagram
+
+For a high-level visual overview of the client's network communication with the Game Server, refer to the diagram below:
+
+![Network Protocol Flow Diagram](../images/network_protocol_flow.png)
+
 ## High-Level Model: The Three-Server Architecture
 
 The Guild Wars 2 client does not connect to a single monolithic server. Instead, it maintains simultaneous, specialized connections to at least **three distinct backend server systems**, each handling specific functionalities with its own dedicated protocol. This robust architecture ensures functional separation, optimizes traffic, and enhances security.
