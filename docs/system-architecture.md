@@ -10,13 +10,13 @@ The three primary protocols and their corresponding server systems are:
 
 1.  **Login Server (`ls2c`/`c2ls`):**
     *   **Purpose:** Handles initial client authentication, account validation, and character selection. This connection is typically short-lived.
-    *   **Client Components:** `GcApi` ([`GcApi_StateMachine.c`](../raw_decompilations/cmsg/login/GcApi_StateMachine.c)), `GcAuthCmd` ([`GcAuthCmd_PacketBuilders.c`](../raw_decompilations/cmsg/login/GcAuthCmd_PacketBuilders.c)).
+    *   **Client Components:** `GcApi` ([`GcApi_StateMachine.c`](raw_decompilations/cmsg/login/GcApi_StateMachine.c)), `GcAuthCmd` ([`GcAuthCmd_PacketBuilders.c`](raw_decompilations/cmsg/login/GcAuthCmd_PacketBuilders.c)).
     *   **Lifecycle:** Established only during the initial client startup and character selection.
     *   **Hand-off Mechanism:** Its final task is to provide the client with the specific network coordinates (IP address and port) of the Game Server and Platform Server to which it should connect for the gameplay session.
 
 2.  **Platform Server (`ps2c`/`c2ps`) - The "Portal":**
     *   **Purpose:** Manages all account-level services, social features, and commercial interactions. This includes character inventory/wallet, achievements, friends lists, guilds, LFG, the Trading Post, and the Gem Store.
-    *   **Client Components:** `PortalCli` ([`PortalCli_Constructor.c`](../raw_decompilations/cmsg/portal/PortalCli_Constructor.c), [`PortalCli_Auth.c`](../raw_decompilations/cmsg/portal/PortalCli_Auth.c)), `GcPortal` ([`GcPortal_Router.c`](../raw_decompilations/cmsg/portal/GcPortal_Router.c)).
+    *   **Client Components:** `PortalCli` ([`PortalCli_Constructor.c`](raw_decompilations/cmsg/portal/PortalCli_Constructor.c), [`PortalCli_Auth.c`](raw_decompilations/cmsg/portal/PortalCli_Auth.c)), `GcPortal` ([`GcPortal_Router.c`](raw_decompilations/cmsg/portal/GcPortal_Router.c)).
     *   **Traffic Examples:** `REQ /Group/GroupInfo`, `/Presence/UserInfo`, `/Game.com.Wallet/WalletInfo`, `MailMsg`, `ChMsg`.
     *   **Lifecycle:** Established after login and remains active in parallel with the Game Server connection throughout the gameplay session.
 
@@ -41,28 +41,28 @@ This section provides a detailed analysis of the primary gameplay connection, wh
 
 ### Incoming (SMSG) Packet Processing:
 
-1.  **Framing & Initial Processing (`Msg::DispatchStream`):** All incoming `gs2c` raw byte streams are managed by [`Msg::DispatchStream`](../raw_decompilations/smsg/Msg_DispatchStream.c). This central function is responsible for reading from the network ring buffer, identifying message frames, and performing initial processing (decryption, decompression) to yield plaintext messages.
+1.  **Framing & Initial Processing (`Msg::DispatchStream`):** All incoming `gs2c` raw byte streams are managed by [`Msg::DispatchStream`](raw_decompilations/smsg/Msg_DispatchStream.c). This central function is responsible for reading from the network ring buffer, identifying message frames, and performing initial processing (decryption, decompression) to yield plaintext messages.
 
 2.  **Dispatch Type Evaluation:** For each message, `Msg::DispatchStream` retrieves its `Handler Info` structure. A key field in this structure is the "Dispatch Type" (`HandlerInfo+0x10`), which dictates the processing path:
     *   **Dispatch Type `0` (Generic Path):** For most packets. Leads to schema-driven parsing.
     *   **Dispatch Type `1` (Fast Path):** For high-frequency packets like `SMSG_AGENT_UPDATE_BATCH` (0x0001). This path uses hardcoded logic for performance.
 
 3.  **Parsing & Data Extraction:**
-    *   **Generic Path (`MsgUnpack::ParseWithSchema`):** For Type `0` packets, `Msg::DispatchStream` calls the schema virtual machine, [`MsgUnpack::ParseWithSchema`](../raw_decompilations/common/MsgUnpack_ParseWithSchema.c), to transform raw bytes into a structured data tuple.
+    *   **Generic Path (`MsgUnpack::ParseWithSchema`):** For Type `0` packets, `Msg::DispatchStream` calls the schema virtual machine, [`MsgUnpack::ParseWithSchema`](raw_decompilations/common/MsgUnpack_ParseWithSchema.c), to transform raw bytes into a structured data tuple.
     *   **Fast Path (Hardcoded Parsing):** For Type `1` packets, `Msg::DispatchStream` contains hardcoded logic to manually parse the payload directly from the network buffer.
 
 4.  **Handler Execution:**
-    *   **Generic Handler Dispatch:** `Msg::DispatchStream` calls the handler function pointer (from `HandlerInfo+0x18`), passing it the parsed data tuple. (e.g., [`Marker::Cli::ProcessAgentMarkerUpdate`](../raw_decompilations/smsg/Marker_Cli_ProcessAgentMarkerUpdate.c)).
-    *   **Fast Path Notification:** After internal processing, `Msg::DispatchStream` calls a notification stub (e.g., [`Event::PreHandler_Stub_0x88`](../raw_decompilations/common/event_system/Event_PreHandler_Stub_0x88.c)) which may queue a new event via [`Event::Factory_QueueEvent`](../raw_decompilations/common/event_system/Event_Factory_QueueEvent.c).
+    *   **Generic Handler Dispatch:** `Msg::DispatchStream` calls the handler function pointer (from `HandlerInfo+0x18`), passing it the parsed data tuple. (e.g., [`Marker::Cli::ProcessAgentMarkerUpdate`](raw_decompilations/smsg/Marker_Cli_ProcessAgentMarkerUpdate.c)).
+    *   **Fast Path Notification:** After internal processing, `Msg::DispatchStream` calls a notification stub (e.g., [`Event::PreHandler_Stub_0x88`](raw_decompilations/common/event_system/Event_PreHandler_Stub_0x88.c)) which may queue a new event via [`Event::Factory_QueueEvent`](raw_decompilations/common/event_system/Event_Factory_QueueEvent.c).
 
 ### Outgoing (CMSG) Packet Processing:
 
 1.  **Game Logic Initiates:** High-level game logic prepares raw data for an outgoing packet.
-2.  **Packet Building (`MsgConn::BuildPacketFromSchema`):** The game logic calls [`MsgConn::BuildPacketFromSchema`](../raw_decompilations/cmsg/MsgConn_BuildPacketFromSchema.c), the primary utility for constructing outgoing packets.
-3.  **Serialization (`Msg::MsgPack`):** `BuildPacketFromSchema` internally uses [`Msg::MsgPack`](../raw_decompilations/cmsg/Msg_MsgPack.c), a schema-driven "virtual machine" to write data into a buffer.
+2.  **Packet Building (`MsgConn::BuildPacketFromSchema`):** The game logic calls [`MsgConn::BuildPacketFromSchema`](raw_decompilations/cmsg/MsgConn_BuildPacketFromSchema.c), the primary utility for constructing outgoing packets.
+3.  **Serialization (`Msg::MsgPack`):** `BuildPacketFromSchema` internally uses [`Msg::MsgPack`](raw_decompilations/cmsg/Msg_MsgPack.c), a schema-driven "virtual machine" to write data into a buffer.
 4.  **Queueing & Sending:** The completed packet is placed into an outgoing queue:
-    *   **Direct Queue (`MsgConn::QueuePacket`):** For discrete events (e.g., heartbeats, agent links), packets are passed to [`MsgConn::QueuePacket`](../raw_decompilations/cmsg/MsgConn_QueuePacket.c), which calls the lower-level [`MsgConn::EnqueuePacket`](../raw_decompilations/cmsg/MsgConn_EnqueuePacket.c).
-    *   **Buffered Stream (`MsgConn::FlushPacketBuffer`):** For continuous data (e.g., movement), data is written into a buffer and periodically flushed by [`MsgConn::FlushPacketBuffer`](../raw_decompilations/cmsg/MsgConn_FlushPacketBuffer.c).
+    *   **Direct Queue (`MsgConn::QueuePacket`):** For discrete events (e.g., heartbeats, agent links), packets are passed to [`MsgConn::QueuePacket`](raw_decompilations/cmsg/MsgConn_QueuePacket.c), which calls the lower-level [`MsgConn::EnqueuePacket`](raw_decompilations/cmsg/MsgConn_EnqueuePacket.c).
+    *   **Buffered Stream (`MsgConn::FlushPacketBuffer`):** For continuous data (e.g., movement), data is written into a buffer and periodically flushed by [`MsgConn::FlushPacketBuffer`](raw_decompilations/cmsg/MsgConn_FlushPacketBuffer.c).
 
 ---
 
@@ -71,6 +71,6 @@ This section provides a detailed analysis of the primary gameplay connection, wh
 This connection handles all non-real-time, account-specific interactions. See the **[Portal Dispatch Analysis](./methodologies/discovery_playbooks/portal-dispatch-analysis.md)** for a full breakdown.
 
 *   **Key Functions:**
-    *   [`Portal::DispatchMessage`](../raw_decompilations/smsg/Portal_DispatchMessage.c): The central `switch` statement that routes incoming Portal messages.
-    *   [`Portal::DynamicHandler_Entry`](../raw_decompilations/smsg/Portal_DynamicHandler_Entry.c): The entry point called by the main network layer to hand off messages to the Portal system.
+    *   [`Portal::DispatchMessage`](raw_decompilations/smsg/Portal_DispatchMessage.c): The central `switch` statement that routes incoming Portal messages.
+    *   [`Portal::DynamicHandler_Entry`](raw_decompilations/smsg/Portal_DynamicHandler_Entry.c): The entry point called by the main network layer to hand off messages to the Portal system.
 
