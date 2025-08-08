@@ -1,14 +1,17 @@
-# -*- coding: utf-8 -*-
+#----------------------------------------------------
+# KX_NameFunctionsFromAsserts.py
 #
-# NameFunctionsFromAssertPaths.py
+# Part of the kx-packet-inspector project
 #
-# Recover original function names from embedded
-# "D:\Perforce\...\Code\..." assertion strings.
+# Ghidra script to recover original function names
+# from embedded "D:\Perforce\...\Code\..." assertion
+# strings.
 #
-# Works on every Ghidra 10.x / 11.x release, handles ASCII, UTF-16,
-# Pascal strings, and creates proper namespaces.
-#
-# @category Analysis
+# Works on every Ghidra 10.x / 11.x release, handles
+# ASCII, UTF-16, and Pascal strings, and creates
+# proper namespaces.
+#----------------------------------------------------
+# @category KX
 
 import re
 from ghidra.program.model.symbol import SourceType
@@ -132,5 +135,5 @@ while data_iter.hasNext() and not monitor.isCancelled():
                 log("    [done] {} -> {}::{}".format(
                     f.getName(), "::".join(ns_tokens), func_token))
 
-print("\nCompleted. {} strings scanned, {} functions renamed.".format(
-    scanned, renamed))
+print("\n[KX] Name Functions from Asserts: Completed.")
+print("    {} strings scanned, {} functions renamed.".format(scanned, renamed))

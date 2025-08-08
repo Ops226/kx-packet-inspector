@@ -36,7 +36,7 @@ This is the manual process for a single function.
 
 Manually checking every function is impractical. A Ghidra script (Python/Jython) can automate this process and name thousands of functions in minutes.
 
-*   **[Ghidra Script: `NameFunctionsFromAssertPaths.py`](../../tools/ghidra/NameFunctionsFromAssertPaths.py)**
+*   **[Ghidra Script: `KX_NameFunctionsFromAsserts.py`](../../tools/ghidra/KX_NameFunctionsFromAsserts.py)**
 
 The script's logic would be:
 
