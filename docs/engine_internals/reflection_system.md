@@ -64,12 +64,14 @@ This structure describes a single variable within a class.
 | `+0x08` | `const char*` | `namePtr`          | A pointer to a null-terminated string with the member's name.           |
 | `+0x10` | `longlong`    | `typeDataOrOffset` | A "tagged" value containing type data, flags, and/or the memory offset. |
 
-## The Path Forward: Decoding the Blueprint
+| `+0x10` | `longlong`    | `typeDataOrOffset` | A 64-bit bitfield. The lower 16 bits are the field's memory offset. |
 
-The mystery is no longer *where* the data is, but what the raw integer values in the `MemberInitializer` *mean*. The path to a full engine blueprint is now clear:
+## Project Complete: The Blueprint Is Decoded
 
-1. **Find the "Reader" Code:** The next step is to locate the core engine code that reads these initializer structures. The most likely place is in a function that uses the global system list (`DAT_14293bba0`) to find the `ReflectStrings` or `TypeReg` system and begin processing the class data.
-2. **Decode the Tags:** By analyzing this "reader" code, we can reverse-engineer the `switch` statement or logic that interprets the `signatureOrType` and `typeDataOrOffset` fields. This will allow us to map these raw numbers to actual C++ types (like `int`, `float`, `pointer`) and their final memory offsets within the C++ objects.
-3. **Create the Final Dump:** With the tags decoded, the [`KX_ReflectionDumper.py`](../../tools/ghidra/KX_ReflectionDumper.py) script can be updated to produce perfect, human-readable C++ struct definitions for the entire game engine.
+The investigation has concluded successfully. The "Reader" code—a small virtual machine responsible for parsing the reflection data—was located and analyzed.
 
-This document represents a stable, evidence-based foundation for any future research into the Guild Wars 2 engine internals.
+The key functions, `Reflect_TypeDecoder` and `Reflect_FieldInitDispatcher`, revealed the exact logic for interpreting the `MemberInitializer` structure. This analysis confirmed that the `typeDataOrOffset` field is a bitfield containing the member's memory offset and various type-specific flags.
+
+With this knowledge, the `KX_ReflectionDumper.py` script has been finalized. It now accurately dumps the engine's class layouts into a clean, human-readable C++ header file, fulfilling the project's primary goal. The most critical decompiled code snippets that serve as evidence of this system's functionality have been preserved in the `raw_decompilations` directory.
+
+This document represents the complete, evidence-based foundation of the engine's core reflection system.
