@@ -1,16 +1,14 @@
-#----------------------------------------------------
-# KX_NameFunctionsFromAsserts.py
+# Dumps ArenaNet's custom reflection system to a C++ header file.
+# Part of the kx-packet-inspector project.
 #
-# Part of the kx-packet-inspector project
+# This script is the final version based on a successful forensic analysis
+# of the engine's type decoder virtual machine.
 #
-# Ghidra script to recover original function names
-# from embedded "D:\Perforce\...\Code\..." assertion
-# strings.
+# Licensed under the same terms as the kx-packet-inspector project:
+# https://github.com/kxtools/kx-packet-inspector
 #
-# Works on every Ghidra 10.x / 11.x release, handles
-# ASCII, UTF-16, and Pascal strings, and creates
-# proper namespaces.
-#----------------------------------------------------
+# MIT License
+#
 # @category KX
 
 import re

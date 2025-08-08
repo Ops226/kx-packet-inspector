@@ -1,16 +1,14 @@
-#----------------------------------------------------
-# KX_NameFunctionsFromAsserts.py
+# Recovers original function names from embedded "D:\Perforce\...\Code\..." assertion strings.
+# Part of the kx-packet-inspector project.
 #
-# Part of the kx-packet-inspector project
+# This script works on Ghidra 10.x/11.x, handles ASCII, UTF-16, and Pascal strings,
+# and creates proper namespaces.
 #
-# Ghidra script to recover original function names
-# from embedded "D:\Perforce\...\Code\..." assertion
-# strings.
+# Licensed under the same terms as the kx-packet-inspector project:
+# https://github.com/kxtools/kx-packet-inspector
 #
-# Works on every Ghidra 10.x / 11.x release, handles
-# ASCII, UTF-16, and Pascal strings, and creates
-# proper namespaces.
-#----------------------------------------------------
+# MIT License
+#
 # @category KX
 
 import re
