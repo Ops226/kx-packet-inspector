@@ -13,7 +13,9 @@
 
 from ghidra.program.model.address import Address
 from ghidra.program.model.mem import MemoryAccessException
-import sys, os, time
+from ghidra.program.model.symbol import SourceType
+from ghidra.util.exception import DuplicateNameException, InvalidInputException
+import sys, os, time, re
 from java.lang import System as JavaSystem
 
 # -----------------------------
@@ -87,6 +89,13 @@ MAX_CLASSES = 20000               # hard cap on number of classes to dump
 MAX_MEMBERS_PER_CLASS = 4096      # hard cap per class to avoid bad counts
 CHUNK_SIZE = 1024 * 1024          # 1 MB read chunks for manual scan
 PROGRESS_EVERY = 200              # console progress cadence in classes
+
+# Function renaming controls
+RENAME_FUNCTIONS = True           # turn off if you do not want any renaming
+DEFAULT_PREFIXES = ("FUN_", "sub_")  # only rename when function name starts with one of these
+AUTO_CREATE_FUNCTIONS = False     # if a hit is not inside a function, optionally create one at the hit
+RENAME_NAMESPACE_TOKENS = ("KX", "Register")  # functions will be placed under this namespace chain
+FUNC_NAME_PREFIX = "Register_"    # base name prefix, final name like Register_ClassName
 
 # -----------------------------
 # Basic helpers
@@ -249,6 +258,8 @@ def find_initializer_addresses_from_pattern(pattern_bytes, wildcard_mask):
     Scan executable blocks for the exact UI pattern.
     For each hit, decode the LEA rip relative target at +3.
     Validate targets with looks_plausible_initializer.
+
+    Returns (initializer_addresses, rename_map) where rename_map maps Function -> class_name.
     """
     pat, mask = _build_sig(pattern_bytes, wildcard_mask)
     pretty = " ".join("{:02X}".format(b) if m else "??" for b, m in zip(pat, mask))
@@ -275,6 +286,7 @@ def find_initializer_addresses_from_pattern(pattern_bytes, wildcard_mask):
     # convert hits to initializer addresses using imm32 displacement at +3
     inits = []
     seen = set()
+    rename_map = {}  # Function -> class_name
     for h in all_hits:
         try:
             window = getBytes(h, 7)  # 48 8D 15 imm32  total 7 bytes
@@ -294,6 +306,18 @@ def find_initializer_addresses_from_pattern(pattern_bytes, wildcard_mask):
                 continue
             seen.add(target)
             inits.append(target)
+
+            # collect rename candidate for the function containing this site
+            f = getFunctionContaining(h)
+            if f is None and AUTO_CREATE_FUNCTIONS:
+                try:
+                    disassemble(h)
+                    f = createFunction(h, None)
+                except Exception:
+                    f = None
+            if f is not None and f not in rename_map:
+                rename_map[f] = name
+
             if DEBUG:
                 kx_print('    [+] initializer "{}" @ {} members {}'.format(name, target, num_members))
             if len(inits) >= MAX_CLASSES:
@@ -304,7 +328,86 @@ def find_initializer_addresses_from_pattern(pattern_bytes, wildcard_mask):
             continue
 
     kx_print("[KX] total plausible initializers: {}".format(len(inits)))
-    return inits
+    return inits, rename_map
+
+# -----------------------------
+# Renaming support
+# -----------------------------
+
+def sanitize_identifier(s):
+    # Keep C++ friendly tokens
+    s2 = re.sub(r"[^A-Za-z0-9_]", "_", s)
+    # Avoid leading digits
+    if s2 and s2[0].isdigit():
+        s2 = "_" + s2
+    # Trim overly long names
+    return s2[:200] if len(s2) > 200 else s2
+
+def get_or_create_namespace(tokens):
+    """
+    Create or reuse nested namespaces and return the deepest one.
+    Mirrors the pattern used in KX_NameFunctionsFromAsserts.py.
+    """
+    tab = currentProgram.getSymbolTable()
+    ns = currentProgram.getGlobalNamespace()
+    for tok in tokens:
+        try:
+            ns = tab.getNamespace(tok, ns) or tab.createNameSpace(ns, tok, SourceType.ANALYSIS)
+        except InvalidInputException:
+            clean = sanitize_identifier(tok)
+            ns = tab.getNamespace(clean, ns) or tab.createNameSpace(ns, clean, SourceType.ANALYSIS)
+    return ns
+
+def rename_unique(func, base_name, namespace):
+    """
+    Rename func to namespace::base_name, adding _1, _2 if needed.
+    """
+    idx = 0
+    while True:
+        cand = base_name if idx == 0 else "{}_{}".format(base_name, idx)
+        try:
+            func.setName(cand, SourceType.ANALYSIS)
+            func.getSymbol().setNamespace(namespace)
+            return True
+        except DuplicateNameException:
+            idx += 1
+        except InvalidInputException as exc:
+            # sanitize and retry once
+            if idx == 0:
+                cand = sanitize_identifier(cand)
+                idx = 0
+                continue
+            return False
+        except Exception:
+            return False
+
+def rename_registration_functions(rename_map):
+    """
+    Rename functions that contain registration call sites based on class names.
+    Returns count of renamed functions.
+    """
+    if not RENAME_FUNCTIONS or not rename_map:
+        return 0
+
+    ns = get_or_create_namespace(RENAME_NAMESPACE_TOKENS)
+    renamed = 0
+
+    for f, class_name in rename_map.items():
+        try:
+            old = f.getName()
+            if DEFAULT_PREFIXES and not old.startswith(DEFAULT_PREFIXES):
+                continue
+            base = FUNC_NAME_PREFIX + sanitize_identifier(class_name)
+            if rename_unique(f, base, ns):
+                renamed += 1
+                if DEBUG:
+                    kx_print("[KX] renamed {} -> {}::{}".format(old, "::".join(RENAME_NAMESPACE_TOKENS), base))
+        except Exception as e:
+            if DEBUG:
+                kx_print("[KX] rename failed for {}: {}".format(f, e))
+
+    kx_print("[KX] renamed {} functions from registration sites".format(renamed))
+    return renamed
 
 # -----------------------------
 # Dumping
@@ -404,14 +507,23 @@ if __name__ == "__main__":
                 pattern_bytes = [0x48, 0x8D, 0x15, 0x00, 0x00, 0x00, 0x00, 0x48, 0x8B, 0xCB, 0xFF, 0x50, 0x08]
                 wildcard_mask = [0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
 
-                all_initializer_addresses = find_initializer_addresses_from_pattern(pattern_bytes, wildcard_mask)
+                all_initializer_addresses, rename_map = find_initializer_addresses_from_pattern(pattern_bytes, wildcard_mask)
 
                 if not all_initializer_addresses:
                     kx_print_important("[KX] Could not find any ClassInitializers. Aborting.")
                     exit()
 
                 total_classes, total_members = dump_class_layouts(all_initializer_addresses, f)
-                
+
+                # After dumping, optionally rename functions that contain the registration sites
+                if RENAME_FUNCTIONS:
+                    try:
+                        renamed = rename_registration_functions(rename_map)
+                        if DEBUG:
+                            kx_print("[KX] rename pass complete, {} functions".format(renamed))
+                    except Exception as e:
+                        kx_print("[KX] rename pass failed: {}".format(e), level="error")
+
                 summary_message = "--- Dump Finished ---\n"
                 summary_message += "Successfully dumped {} classes and {} members.\n".format(total_classes, total_members)
                 summary_message += "Output saved to: {}\n".format(output_file_path)
