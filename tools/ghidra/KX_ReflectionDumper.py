@@ -11,127 +11,179 @@
 #
 # @category KX
 
-import re
-from ghidra.program.model.symbol import SourceType
-from ghidra.util.exception import DuplicateNameException, InvalidInputException
+from ghidra.program.model.address import Address
+import os
 
-# ------------------------------------------------------------------
-# SETTINGS
-# ------------------------------------------------------------------
-DEBUG            = False
-DEFAULT_PREFIXES = ("FUN_", "sub_")    # Rename only these
-SOURCE_EXTS      = (".cpp", ".c", ".hpp", ".h")
-PASCAL_OFFSETS   = (0, 4)              # 0 = C string, 4 = Pascal
+# --- Helper Functions ---
 
-PATH_RE = re.compile(
-    r"(?:0)?D:\\Perforce\\(?:[^\\]+\\)+?Code\\(.+?)(?:\:\d+)?$",
-    re.IGNORECASE,
-)
-
-# ------------------------------------------------------------------
-# HELPERS
-# ------------------------------------------------------------------
-def log(msg):
-    if DEBUG:
-        print(msg)
-
-def split_tokens(path_str):
-    """Return list of path tokens inside Code\\, else None."""
-    m = PATH_RE.search(path_str)
-    if not m:
-        return None
-    rel = m.group(1)
-    for ext in SOURCE_EXTS:
-        if rel.endswith(ext):
-            rel = rel[:-len(ext)]
-            break
-    return [p for p in rel.split("\\") if p]
-
-def get_or_create_namespace(tokens):
-    """Create (or reuse) nested namespaces and return the deepest one."""
-    tab = currentProgram.getSymbolTable()
-    ns  = currentProgram.getGlobalNamespace()
-    for tok in tokens:
-        try:
-            ns = tab.getNamespace(tok, ns) or tab.createNameSpace(ns, tok, SourceType.ANALYSIS)
-        except InvalidInputException:
-            clean = re.sub(r"[^A-Za-z0-9_]", "_", tok)
-            ns = tab.getNamespace(clean, ns) or tab.createNameSpace(ns, clean, SourceType.ANALYSIS)
-    return ns
-
-def rename_unique(func, base_name, namespace):
-    """Rename func to namespace::base_name, adding _1, _2 if needed."""
-    idx = 0
-    while True:
-        cand = base_name if idx == 0 else "{}_{}".format(base_name, idx)
-        try:
-            func.setName(cand, SourceType.ANALYSIS)
-            func.getSymbol().setNamespace(namespace)
-            return True
-        except DuplicateNameException:
-            idx += 1
-        except (InvalidInputException, Exception) as exc:
-            log("    [skip] {}".format(exc))
-            return False
-
-# ------------------------------------------------------------------
-# MAIN
-# ------------------------------------------------------------------
-listing   = currentProgram.getListing()
-data_iter = listing.getDefinedData(True)
-
-try:
-    monitor.initialize(listing.getNumDefinedData())
-except AttributeError:
-    monitor.initialize(0)
-
-renamed, scanned = 0, 0
-seen_funcs = set()
-
-while data_iter.hasNext() and not monitor.isCancelled():
-    data = data_iter.next()
-    scanned += 1
-    monitor.incrementProgress(1)
-
-    # Convert any Java object to a Python str
+def is_valid_read_ptr(p):
+    """Checks if a long integer is a plausible pointer in the program's memory space."""
+    if p is None or p == 0:
+        return False
     try:
-        sval = str(data.getValue())
-    except Exception:
-        continue
+        blk = getMemoryBlock(toAddr(p))
+        if blk is None or not blk.isInitialized() or not blk.isRead():
+            return False
+    except:
+        return False
+    return True
 
-    if "Perforce" not in sval:
-        continue
+def read_c_string(p, limit=128):
+    """Safely reads a C-style string from a given address."""
+    if not is_valid_read_ptr(p):
+        return None # Return None for invalid pointers
+    s = []
+    a = toAddr(p)
+    try:
+        for _ in range(limit):
+            b = getByte(a) & 0xFF
+            if b == 0:
+                break
+            if 32 <= b <= 126: # Printable ASCII
+                s.append(chr(b))
+            else:
+                # Stop at the first non-printable character
+                break
+            a = a.add(1)
+    except:
+        return "READ_ERROR"
+    return "".join(s) if s else "EMPTY"
 
-    toks = split_tokens(sval)
-    if not toks or len(toks) < 2:
-        continue
+def u64(addr):
+    return getLong(addr) & 0xFFFFFFFFFFFFFFFF
 
-    ns_tokens, func_token = toks[:-1], toks[-1]
-    ns_obj = get_or_create_namespace(ns_tokens)
+def u32(addr):
+    return getInt(addr) & 0xFFFFFFFF
 
-    for off in PASCAL_OFFSETS:
-        addr = data.getAddress().add(off) if off else data.getAddress()
-        refs = list(getReferencesTo(addr))
-        if not refs:
-            continue
+# --- Type Decoding Logic ---
 
-        log("\n[STR ] {}  refs={}  {}::{}".format(
-            addr, len(refs), "::".join(ns_tokens), func_token))
+def decode_type_data(type_data_val):
+    """
+    Decodes the 'typeDataOrOffset' field from the MemberInitializer.
+    Based on forensic analysis, this is a bitfield.
+    """
+    offset = type_data_val & 0xFFFF
+    flags = (type_data_val >> 16) & 0xFFFF
+    return offset, flags
 
-        for r in refs:
-            f = getFunctionContaining(r.getFromAddress())
-            if f is None or f in seen_funcs:
-                continue
-            seen_funcs.add(f)
+def describe_type(signature_ptr, type_data_val):
+    """
+    Creates a human-readable description of a member's type.
+    """
+    type_str = read_c_string(signature_ptr)
+    if type_str is None:
+        # If it's not a string, treat it as a type tag
+        type_str = "TypeTag_0x{:X}".format(signature_ptr)
+    return type_str
 
-            if not f.getName().startswith(DEFAULT_PREFIXES):
-                log("    [skip] already named {}".format(f.getName()))
-                continue
+# --- Main Dumper Logic ---
 
-            if rename_unique(f, func_token, ns_obj):
-                renamed += 1
-                log("    [done] {} -> {}::{}".format(
-                    f.getName(), "::".join(ns_tokens), func_token))
+def dump_class_layouts(start_ptr, end_ptr, output_file):
+    cur = toAddr(start_ptr)
+    end = toAddr(end_ptr)
 
-print("\n[KX] Name Functions from Asserts: Completed.")
-print("    {} strings scanned, {} functions renamed.".format(scanned, renamed))
+    class_stride = 0x28  # 40 bytes (Confirmed)
+    member_stride = 0x18 # 24 bytes (Confirmed)
+
+    class_count = 0
+    member_count = 0
+
+    output_file.write("//----------------------------------------------------\n")
+    output_file.write("// Dumped by the KX Reflection Dumper\n")
+    output_file.write("// Part of the kx-packet-inspector project\n")
+    output_file.write("//----------------------------------------------------\n\n")
+    output_file.write("--- ArenaNet Custom hkReflect Dump ---\n\n")
+    output_file.write("// Generated by KX_ReflectionDumper.py (Final Version)\n")
+    output_file.write("// Analysis based on reversing the engine's Type Decoder VM.\n\n")
+
+    while cur < end and not monitor.isCancelled():
+        # Read the ClassInitializer structure
+        class_name_ptr  = u64(cur.add(0x00))
+        parent_name_ptr = u64(cur.add(0x08))
+        member_list_ptr = u64(cur.add(0x18))
+        num_members     = u32(cur.add(0x20))
+
+        class_name = read_c_string(class_name_ptr)
+        if not class_name:
+            class_name = "Class_0x{:X}".format(class_name_ptr)
+
+        parent_name = read_c_string(parent_name_ptr)
+        # Prevent self-inheritance in output
+        if not parent_name or parent_name == class_name:
+            parent_name = None
+
+        output_file.write("\n//----------------------------------------------------\n")
+        output_file.write("// Class: {} (Initializer @ {})\n".format(class_name, cur))
+
+        if parent_name:
+            output_file.write("struct {} : public {} {{\n".format(class_name, parent_name))
+        else:
+            output_file.write("struct {} {{\n".format(class_name))
+
+        if num_members > 0 and is_valid_read_ptr(member_list_ptr):
+            mbase = toAddr(member_list_ptr)
+            for i in range(num_members):
+                entry_addr = mbase.add(i * member_stride)
+
+                # Read the MemberInitializer (FieldDecl) structure
+                signature_or_type_ptr = u64(entry_addr.add(0x00))
+                name_ptr              = u64(entry_addr.add(0x08))
+                type_data_or_offset   = u64(entry_addr.add(0x10))
+
+                field_name = read_c_string(name_ptr)
+                if not field_name:
+                    field_name = "member_0x{:X}".format(name_ptr)
+                
+                field_offset, type_flags = decode_type_data(type_data_or_offset)
+                type_name = describe_type(signature_or_type_ptr, type_data_or_offset)
+
+                # Write the C++ style member definition
+                output_file.write("    /* 0x{:04X} */ {:<40} {}; // Flags: 0x{:04X}\n".format(
+                    field_offset, type_name, field_name, type_flags))
+
+                member_count += 1
+
+        output_file.write("};\n")
+        
+        class_count += 1
+        cur = cur.add(class_stride)
+    
+    return class_count, member_count
+
+# --- Script Entry Point ---
+
+if __name__ == "__main__":
+    try:
+        output_file_path = askFile("Select Output File", "Save Dump").getAbsolutePath()
+
+        if output_file_path:
+            with open(output_file_path, "w") as f:
+                initializer_blocks = [
+                    (0x142607840, 0x14260BC60),
+                ]
+                
+                total_classes = 0
+                total_members = 0
+
+                f.write("#pragma once\n\n")
+                f.write("// This file was generated by a script. Do not edit.\n\n")
+
+                for start_addr, end_addr in initializer_blocks:
+                    f.write("// Dumping block: 0x{:X} - 0x{:X}\n".format(start_addr, end_addr))
+                    classes, members = dump_class_layouts(start_addr, end_addr, f)
+                    total_classes += classes
+                    total_members += members
+                
+                summary_message = "--- Dump Finished ---\n"
+                summary_message += "Successfully dumped {} classes and {} members.\n".format(total_classes, total_members)
+                summary_message += "Output saved to: {}\n".format(output_file_path)
+                
+                f.write("\n// --- Summary ---\n")
+                f.write("// " + summary_message.replace("\n", "\n// "))
+                
+                print(summary_message)
+
+    except Exception as e:
+        import traceback
+        print("An error occurred:")
+        traceback.print_exc()
