@@ -6,7 +6,9 @@ This document outlines the core principles of the proprietary reflection system 
 
 This system is the blueprint for the game's object model, defining the memory layout, inheritance, and member variables for hundreds of core engine and gameplay classes.
 
-> **Related Tool:** See the [final reflection dumper script](../../tools/ghidra/KX_ReflectionDumper.py) used to extract and analyze this data.
+> **Related Tools:** See the reflection dumper scripts used to extract and analyze this data:
+> - [Static Addresses Dumper](../../tools/ghidra/KX_ReflectionDumper_StaticAddresses.py)
+> - [Dynamic Scan Dumper](../../tools/ghidra/KX_ReflectionDumper_DynamicScan.py)
 
 ## Core Discovery: A Custom `hkReflect` System
 
@@ -72,6 +74,6 @@ The investigation has concluded successfully. The "Reader" code—a small virtua
 
 The key functions, `Reflect_TypeDecoder` and `Reflect_FieldInitDispatcher`, revealed the exact logic for interpreting the `MemberInitializer` structure. This analysis confirmed that the `typeDataOrOffset` field is a bitfield containing the member's memory offset and various type-specific flags.
 
-With this knowledge, the [`KX_ReflectionDumper.py`](../../tools/ghidra/KX_ReflectionDumper.py) script has been finalized. It now accurately dumps the engine's class layouts into a clean, human-readable C++ header file, fulfilling the project's primary goal. The most critical decompiled code snippets that serve as evidence of this system's functionality have been preserved in the `raw_decompilations` directory.
+With this knowledge, the [Dynamic Scan Dumper](../../tools/ghidra/KX_ReflectionDumper_DynamicScan.py) script has been finalized. It now accurately dumps the engine's class layouts into a clean, human-readable C++ header file, fulfilling the project's primary goal. The most critical decompiled code snippets that serve as evidence of this system's functionality have been preserved in the `raw_decompilations` directory.
 
 This document represents the complete, evidence-based foundation of the engine's core reflection system.
