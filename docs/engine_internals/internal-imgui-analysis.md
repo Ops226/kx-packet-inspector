@@ -4,7 +4,7 @@ This document summarizes the evidence found within the Guild Wars 2 game client 
 
 ## Summary
 
-Analysis of the client's executable and memory dumps reveals that ArenaNet integrated a specific version of the Dear ImGui library, likely for internal debugging, real-time analysis, and development purposes. This UI is not accessible to players by default but appears to be deeply integrated into the engine's core systems. The potential to re-enable or hook into this UI is significant and warrants further investigation.
+Analysis of the client's executable and memory dumps reveals that ArenaNet integrated a specific version of the Dear ImGui library, likely for internal debugging, real-time analysis, and development purposes. This UI is not accessible to players by default but appears to be deeply integrated into the engine's core systems. The potential to re-enable or hook into this UI is significant. However, it should be noted that important parts of these tools are likely missing from the public build due to conditional compilation, limiting what can be fully restored.
 
 ## Evidence
 
@@ -40,6 +40,8 @@ This internal UI likely provides developers with powerful tools to inspect and m
 
 ## Further Investigation
 
+### Next Steps
+
 While the existence of this UI is clear, the method for initializing and rendering it is not called statically from the code, making it non-trivial to locate. The engine almost certainly uses function pointers or virtual functions to call into the ImGui backend.
 
 The next steps for this investigation are:
@@ -48,4 +50,8 @@ The next steps for this investigation are:
 2.  **Identify the Initialization Function:** Find where the function pointers for the platform backend (like the `CreateWindow` wrapper) are assigned. This will likely be in a function like `ImGui_ImplWin32_Init`.
 3.  **Hook the Render Function:** The end goal is to identify and hook the main `ImGui::Render()` or `ImGui_ImplDX11_RenderDrawData` call to allow for rendering custom UI or interacting with the game's hidden UI.
 
-This is a significant discovery that could greatly expand the capabilities of tools like the KX Packet Inspector.
+### Feasibility and Limitations
+
+According to community experts, while the ImGui framework and some smaller debug tools are present in the public build, more significant developer tools are guarded by conditional compilation and are not included in the final executable.
+
+This means that while it may be possible to get some debug windows working, a full restoration of the original developer suite is likely impossible. The investigation can still yield valuable insights into the engine's structure and provide a powerful framework for building new tools.
