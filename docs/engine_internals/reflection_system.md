@@ -16,6 +16,7 @@ Initial analysis of the binary can be misleading, as the engine utilizes **multi
 
 1.  **File Serialization System:** Used for reading and writing game asset files. This system is responsible for handling the Havok Packfile (`.pf`) format used in the game's `.dat` archive. This is the system primarily documented by community tools like `gw2_reverse` and `gw2formats`.
 2.  **Runtime Reflection System (`hkReflect`):** This is a separate, more modern system based on the `hkReflect` namespace. Its purpose appears to be runtime type-checking, object management, and powering high-level engine features like the internal developer UI.
+3.  **Other Specialized Runtime Systems:** It is likely that even more, smaller, specialized reflection-like systems exist for specific engine features (e.g., for handling arrays of reflected types, gameplay systems, or other specific data structures). This is an area for future research.
 
 **This document focuses exclusively on the second system: the `hkReflect` runtime engine.**
 
