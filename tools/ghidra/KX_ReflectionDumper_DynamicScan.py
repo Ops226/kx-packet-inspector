@@ -137,17 +137,6 @@ def u64(addr):
 def u32(addr):
     return getInt(addr) & 0xFFFFFFFF
 
-def decode_type_data(type_data_val):
-    offset = type_data_val & 0xFFFF
-    flags = (type_data_val >> 16) & 0xFFFF
-    return offset, flags
-
-def describe_type(signature_ptr, type_data_val):
-    type_str = read_c_string(signature_ptr)
-    if type_str is None:
-        type_str = "TypeTag_0x{:X}".format(signature_ptr)
-    return type_str
-
 def is_ascii_like(s):
     if not s or s == "EMPTY" or s == "READ_ERROR":
         return False
@@ -165,6 +154,152 @@ def read_u32(buf, i):
 
 def to_signed32(x):
     return x - 0x100000000 if x & 0x80000000 else x
+
+# -----------------------------
+# Identifier and type sanitizers
+# -----------------------------
+
+IDENT_OK_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+TYPE_SAFE_CHARS_RE = re.compile(r"^[A-Za-z0-9_:\*\&\[\]<> ]+$")
+ARTIFACT_TOKEN_RE = re.compile(r"^[a-z]{1,3}[0-9a-f]{1,4}B$", re.IGNORECASE)
+
+PRIMITIVE_TYPES = set((
+    "bool", "char", "signed char", "unsigned char",
+    "short", "unsigned short",
+    "int", "unsigned int",
+    "long", "unsigned long",
+    "long long", "unsigned long long",
+    "float", "double", "long double",
+    "void", "void*"
+))
+QUALIFIERS = set(("const", "volatile"))
+ALLOWED_PREFIXES = (
+    "hk", "hkp", "hkx", "hka", "hkcd", "hkai",
+    "hkRef", "hkArray", "hkString", "std"
+)
+
+def sanitize_cpp_identifier(name, fallback):
+    """
+    Make a safe C++ identifier for fields or class names.
+    If the cleaned name is empty or invalid, use fallback.
+    """
+    if not name:
+        return fallback
+    clean = re.sub(r"[^A-Za-z0-9_]", "_", name)
+    clean = re.sub(r"_+", "_", clean).strip("_")
+    if clean and clean[0].isdigit():
+        clean = "_" + clean
+    if not clean or not IDENT_OK_RE.match(clean):
+        return fallback
+    return clean[:128]
+
+def is_valid_type_ident_token(tok):
+    """
+    Accept realistic identifier tokens that could appear in a C++ type.
+    Reject one letter junk and common artifact blobs like pm4B, xb4B, xc4B, t4B.
+    """
+    if tok in PRIMITIVE_TYPES or tok in QUALIFIERS:
+        return True
+    if ARTIFACT_TOKEN_RE.match(tok):
+        return False
+    if not IDENT_OK_RE.match(tok):
+        return False
+    if len(tok) < 2:
+        return False
+    if tok[0].isupper():
+        return True
+    for pref in ALLOWED_PREFIXES:
+        if tok.startswith(pref):
+            return True
+    return False
+
+def is_plausible_type_string(s):
+    """
+    Conservative filter for type names coming from strings.
+    """
+    if not s or s in ("EMPTY", "READ_ERROR"):
+        return False
+    s = s.strip()
+    if s in PRIMITIVE_TYPES:
+        return True
+    if not TYPE_SAFE_CHARS_RE.match(s):
+        return False
+    if not re.search(r"[A-Za-z]", s):
+        return False
+    return True
+
+def sanitize_cpp_type_name(name, fallback):
+    """
+    Keep a readable but safe C++ type name, allowing namespaces and pointer/reference syntax.
+    If invalid, return fallback.
+    """
+    if not name:
+        return fallback
+    s = " ".join(name.split())
+    if s in PRIMITIVE_TYPES:
+        return s
+    if not is_plausible_type_string(s):
+        return fallback
+    tokens = re.split(r"(\s+|::|<|>|,|\[|\]|\*+|&+)", s)
+    out = []
+    for t in tokens:
+        if not t:
+            continue
+        if t.isspace() or t in ("::", "<", ">", ",", "[", "]"):
+            out.append(t)
+            continue
+        if re.match(r"^(?:\*+|&+)$", t):
+            out.append(t)
+            continue
+        if is_valid_type_ident_token(t):
+            out.append(t)
+            continue
+        return fallback
+    result = "".join(out).strip()
+    if not result or ARTIFACT_TOKEN_RE.match(result):
+        return fallback
+    return result
+
+# -----------------------------
+# Type decoding logic
+# -----------------------------
+
+# Educated guess for common Tag IDs to C++ type mapping.
+# These are based on the sizes observed in Reflect_GenericCopyDispatcher and Reflect_MemmoveDispatcher.
+TAG_ID_TO_CPP_TYPE_MAP = {
+    0x1: "bool",
+    0x2: "short",
+    0x3: "int",
+    0x4: "float",
+    0x5: "long long",
+    0x6: "double",
+    0x7: "void*",
+    # Extend as needed from the VM switch.
+}
+
+def decode_type_data(type_data_val):
+    offset = type_data_val & 0xFFFF
+    flags = (type_data_val >> 16) & 0xFFFF
+    return offset, flags
+
+def describe_type(signature_or_type_val, type_data_or_offset=None):
+    """
+    Returns a human readable, sanitized type name.
+    The second parameter is accepted for future extension.
+    """
+    if signature_or_type_val == 0:
+        return "unknown_t"
+    # Try as C string then sanitize
+    type_str = read_c_string(signature_or_type_val)
+    if type_str and type_str not in ("READ_ERROR", "EMPTY"):
+        safe = sanitize_cpp_type_name(type_str, None)
+        if safe:
+            return safe
+    # Try numeric tag map
+    if signature_or_type_val in TAG_ID_TO_CPP_TYPE_MAP:
+        return TAG_ID_TO_CPP_TYPE_MAP[signature_or_type_val]
+    # Opaque
+    return "TypeTag_0x{:X}".format(signature_or_type_val)
 
 # -----------------------------
 # Heuristics for initializer structs
@@ -190,7 +325,6 @@ def looks_plausible_initializer(a):
     if not is_ascii_like(name):
         return False, None, None, None, None
 
-    # Cap absurd member counts to avoid heap blowups
     if num_members > MAX_MEMBERS_PER_CLASS:
         if DEBUG:
             kx_print("    [skip] {} num_members {} too large at {}".format(name, num_members, a))
@@ -212,11 +346,6 @@ def _exec_blocks():
             yield blk
 
 def _scan_block_for_pattern(blk, pat, mask):
-    """
-    Scan a memory block for pattern with mask.
-    pat, mask are lists of ints 0..255, mask[i] == 0 means wildcard.
-    Returns list of Address hits.
-    """
     hits = []
     pat_len = len(pat)
     if pat_len == 0:
@@ -235,7 +364,6 @@ def _scan_block_for_pattern(blk, pat, mask):
         if limit > 0:
             for i in range(0, limit):
                 ok = True
-                # manual compare with mask
                 for j in range(pat_len):
                     if mask[j] and b[i + j] != pat[j]:
                         ok = False
@@ -244,7 +372,6 @@ def _scan_block_for_pattern(blk, pat, mask):
                     hits.append(start.add(pos + i))
         if read_len < CHUNK_SIZE:
             break
-        # keep overlap to not miss boundary matches
         pos += read_len - overlap
     return hits
 
@@ -258,8 +385,7 @@ def find_initializer_addresses_from_pattern(pattern_bytes, wildcard_mask):
     Scan executable blocks for the exact UI pattern.
     For each hit, decode the LEA rip relative target at +3.
     Validate targets with looks_plausible_initializer.
-
-    Returns (initializer_addresses, rename_map) where rename_map maps Function -> class_name.
+    Returns (initializer_addresses, rename_map)
     """
     pat, mask = _build_sig(pattern_bytes, wildcard_mask)
     pretty = " ".join("{:02X}".format(b) if m else "??" for b, m in zip(pat, mask))
@@ -283,10 +409,9 @@ def find_initializer_addresses_from_pattern(pattern_bytes, wildcard_mask):
         if len(all_hits) > MAX_LOG_HITS:
             kx_print("        ... {} more".format(len(all_hits) - MAX_LOG_HITS))
 
-    # convert hits to initializer addresses using imm32 displacement at +3
     inits = []
     seen = set()
-    rename_map = {}  # Function -> class_name
+    rename_map = {}
     for h in all_hits:
         try:
             window = getBytes(h, 7)  # 48 8D 15 imm32  total 7 bytes
@@ -307,7 +432,6 @@ def find_initializer_addresses_from_pattern(pattern_bytes, wildcard_mask):
             seen.add(target)
             inits.append(target)
 
-            # collect rename candidate for the function containing this site
             f = getFunctionContaining(h)
             if f is None and AUTO_CREATE_FUNCTIONS:
                 try:
@@ -335,19 +459,12 @@ def find_initializer_addresses_from_pattern(pattern_bytes, wildcard_mask):
 # -----------------------------
 
 def sanitize_identifier(s):
-    # Keep C++ friendly tokens
     s2 = re.sub(r"[^A-Za-z0-9_]", "_", s)
-    # Avoid leading digits
     if s2 and s2[0].isdigit():
         s2 = "_" + s2
-    # Trim overly long names
     return s2[:200] if len(s2) > 200 else s2
 
 def get_or_create_namespace(tokens):
-    """
-    Create or reuse nested namespaces and return the deepest one.
-    Mirrors the pattern used in KX_NameFunctionsFromAsserts.py.
-    """
     tab = currentProgram.getSymbolTable()
     ns = currentProgram.getGlobalNamespace()
     for tok in tokens:
@@ -359,9 +476,6 @@ def get_or_create_namespace(tokens):
     return ns
 
 def rename_unique(func, base_name, namespace):
-    """
-    Rename func to namespace::base_name, adding _1, _2 if needed.
-    """
     idx = 0
     while True:
         cand = base_name if idx == 0 else "{}_{}".format(base_name, idx)
@@ -371,8 +485,7 @@ def rename_unique(func, base_name, namespace):
             return True
         except DuplicateNameException:
             idx += 1
-        except InvalidInputException as exc:
-            # sanitize and retry once
+        except InvalidInputException:
             if idx == 0:
                 cand = sanitize_identifier(cand)
                 idx = 0
@@ -382,16 +495,10 @@ def rename_unique(func, base_name, namespace):
             return False
 
 def rename_registration_functions(rename_map):
-    """
-    Rename functions that contain registration call sites based on class names.
-    Returns count of renamed functions.
-    """
     if not RENAME_FUNCTIONS or not rename_map:
         return 0
-
     ns = get_or_create_namespace(RENAME_NAMESPACE_TOKENS)
     renamed = 0
-
     for f, class_name in rename_map.items():
         try:
             old = f.getName()
@@ -405,7 +512,6 @@ def rename_registration_functions(rename_map):
         except Exception as e:
             if DEBUG:
                 kx_print("[KX] rename failed for {}: {}".format(f, e))
-
     kx_print("[KX] renamed {} functions from registration sites".format(renamed))
     return renamed
 
@@ -422,7 +528,7 @@ def dump_class_layouts(addresses, output_file):
     output_file.write("// Dumped by the KX Reflection Dumper\n")
     output_file.write("// Part of the kx-packet-inspector project\n")
     output_file.write("//----------------------------------------------------\n\n")
-    output_file.write("--- ArenaNet Custom hkReflect Dump ---\n\n")
+    output_file.write("// --- ArenaNet Custom hkReflect Dump ---\n\n")
     output_file.write("// Generated by KX_ReflectionDumper.py\n")
     output_file.write("// Analysis based on reversing the engine's Type Decoder VM.\n\n")
 
@@ -431,15 +537,18 @@ def dump_class_layouts(addresses, output_file):
 
     for idx, addr in enumerate(addresses[:MAX_CLASSES]):
         try:
-            ok, class_name, parent_name_ptr, member_list_ptr, num_members = looks_plausible_initializer(addr)
+            ok, class_name_raw, parent_name_ptr, member_list_ptr, num_members = looks_plausible_initializer(addr)
             if not ok:
                 if DEBUG:
                     kx_print("    [skip] not plausible at {}".format(addr))
                 continue
 
-            parent_name = read_c_string(parent_name_ptr)
-            if not parent_name or parent_name == class_name:
-                parent_name = None
+            # Sanitize class and parent names
+            class_name = sanitize_cpp_identifier(class_name_raw, "Class_0x{:X}".format(addr.getOffset()))
+            parent_name_raw = read_c_string(parent_name_ptr)
+            if not is_ascii_like(parent_name_raw) or parent_name_raw == class_name_raw:
+                parent_name_raw = None
+            parent_name = sanitize_cpp_identifier(parent_name_raw, "Base") if parent_name_raw else None
 
             output_file.write("\n//----------------------------------------------------\n")
             output_file.write("// Class: {} (Initializer @ {})\n".format(class_name, addr))
@@ -455,19 +564,36 @@ def dump_class_layouts(addresses, output_file):
                 for i in range(safe_n):
                     try:
                         entry_addr = mbase.add(i * member_stride)
+
                         signature_or_type_ptr = u64(entry_addr.add(0x00))
-                        name_ptr = u64(entry_addr.add(0x08))
-                        type_data_or_offset = u64(entry_addr.add(0x10))
+                        name_ptr              = u64(entry_addr.add(0x08))
+                        type_data_or_offset   = u64(entry_addr.add(0x10))
 
-                        field_name = read_c_string(name_ptr)
-                        if not is_ascii_like(field_name):
-                            field_name = "member_0x{:X}".format(name_ptr)
-
+                        # Decode offset and flags first
                         field_offset, type_flags = decode_type_data(type_data_or_offset)
-                        type_name = describe_type(signature_or_type_ptr, type_data_or_offset)
-                        output_file.write("    /* 0x{:04X} */ {:<40} {}; // Flags: 0x{:04X}\n".format(
-                            field_offset, type_name, field_name, type_flags))
+
+                        # Field name sanitize with artifact filter
+                        field_name_raw = read_c_string(name_ptr)
+                        if not is_ascii_like(field_name_raw):
+                            field_name_raw = None
+                        if field_name_raw and ARTIFACT_TOKEN_RE.match(field_name_raw):
+                            field_name_raw = None
+                        fallback_field = "member_0x{:X}".format(name_ptr)
+                        safe_field_name = sanitize_cpp_identifier(field_name_raw, fallback_field)
+
+                        # Type name sanitize with artifact filter
+                        type_name_raw = describe_type(signature_or_type_ptr, type_data_or_offset)
+                        safe_type_name = sanitize_cpp_type_name(type_name_raw, "unknown_t")
+                        if ARTIFACT_TOKEN_RE.match(safe_type_name):
+                            safe_type_name = "unknown_t"
+
+                        output_file.write(
+                            "    /* 0x{:04X} */ {:<40} {}; // Flags: 0x{:04X}\n".format(
+                                field_offset, safe_type_name, safe_field_name, type_flags
+                            )
+                        )
                         member_count += 1
+
                     except MemoryAccessException:
                         output_file.write("    // Read error in member list at entry {}\n".format(i))
                         break
@@ -489,7 +615,7 @@ def dump_class_layouts(addresses, output_file):
             if DEBUG:
                 kx_print("    [skip] exception at {}: {}".format(addr, e))
             continue
-    
+
     return class_count, member_count
 
 # -----------------------------
@@ -515,7 +641,6 @@ if __name__ == "__main__":
 
                 total_classes, total_members = dump_class_layouts(all_initializer_addresses, f)
 
-                # After dumping, optionally rename functions that contain the registration sites
                 if RENAME_FUNCTIONS:
                     try:
                         renamed = rename_registration_functions(rename_map)
@@ -531,7 +656,6 @@ if __name__ == "__main__":
                 f.write("\n// --- Summary ---\n")
                 f.write("// " + summary_message.replace("\n", "\n// "))
 
-                # Print summary loudly at the end
                 kx_print_important(summary_message)
                 try:
                     monitor.setMessage("KX dump done")
