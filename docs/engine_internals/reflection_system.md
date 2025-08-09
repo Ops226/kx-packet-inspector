@@ -80,9 +80,16 @@ It has been discovered that not all fundamental engine classes are explicitly re
 
 The current class dumps primarily represent classes that are statically registered at engine startup. However, the engine employs a modular design where specialized classes, such as `hkpSerializedAgentNnEntry` used in networking, are likely registered dynamically by their respective modules only when needed during gameplay. Future analysis will involve dynamic observation to identify additional `TypeReg::add()` calls during runtime.
 
-### Decoding Type IDs: The Final Step
+#### Inferring C++ Types from Copy/Move Dispatchers
 
-The next crucial step in fully understanding the reflection system is to analyze the "Type Decoder" virtual machine code. Specifically, functions like `FUN_1415872b0` and its helpers (e.g., `FUN_141587e50`) are expected to contain a switch statement or similar logic that maps numerical "Tag IDs" (from `MemberInitializer::signatureOrType`) to their corresponding C++ types. Identifying this mapping will provide a complete dictionary for interpreting the reflection blueprint.
+Further analysis of the `Reflect_GenericCopyDispatcher` and `Reflect_MemmoveDispatcher` functions has revealed a direct mechanism for inferring C++ types. These functions contain `switch` statements that dispatch operations based on the *size* of the data being copied or moved. This allows for the deduction of primitive C++ types:
+
+*   **1 byte:** `char`, `bool`, `int8_t`, `uint8_t`
+*   **2 bytes:** `short`, `int16_t`, `uint16_t`
+*   **4 bytes:** `int`, `float`, `int32_t`, `uint32_t`
+*   **8 bytes:** `long long`, `double`, `void*`, or any pointer type (`T*`)
+
+For sizes between 9 and 15 bytes, the dispatchers handle these as combinations of 8-byte and smaller chunks, indicating custom structures or fixed-size arrays. Larger data blocks are handled efficiently using SIMD instructions (e.g., `MOVDQU`, `VMOVDQU`, `VMOVNTDQ`). This size-based dispatch is a key component of how the engine interprets the `MemberInitializer` `signatureOrType` field to perform type-aware operations.
 
 ## Project Complete: The Blueprint Is Decoded
 
