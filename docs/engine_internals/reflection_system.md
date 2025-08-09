@@ -68,6 +68,22 @@ This structure describes a single variable within a class.
 
 | `+0x10` | `longlong`    | `typeDataOrOffset` | A 64-bit bitfield. The lower 16 bits are the field's memory offset. |
 
+## Advanced Insights and Future Work
+
+The ongoing analysis of the `hkReflect` system has yielded further critical insights into its architecture and revealed clear paths for continued investigation.
+
+### Implicit vs. Explicit Reflection
+
+It has been discovered that not all fundamental engine classes are explicitly registered within the reflection system dumps. Core building blocks like `hkBaseObject` and `hkReferencedObject` are implicitly known by the engine's "Type Decoder" virtual machine. This means the reflection system primarily documents classes that need dynamic lookup, while foundational types are hardcoded into the system's parsing logic itself.
+
+### Static vs. Dynamic Registration
+
+The current class dumps primarily represent classes that are statically registered at engine startup. However, the engine employs a modular design where specialized classes, such as `hkpSerializedAgentNnEntry` used in networking, are likely registered dynamically by their respective modules only when needed during gameplay. Future analysis will involve dynamic observation to identify additional `TypeReg::add()` calls during runtime.
+
+### Decoding Type IDs: The Final Step
+
+The next crucial step in fully understanding the reflection system is to analyze the "Type Decoder" virtual machine code. Specifically, functions like `FUN_1415872b0` and its helpers (e.g., `FUN_141587e50`) are expected to contain a switch statement or similar logic that maps numerical "Tag IDs" (from `MemberInitializer::signatureOrType`) to their corresponding C++ types. Identifying this mapping will provide a complete dictionary for interpreting the reflection blueprint.
+
 ## Project Complete: The Blueprint Is Decoded
 
 The investigation has concluded successfully. The "Reader" code—a small virtual machine responsible for parsing the reflection data—was located and analyzed.
