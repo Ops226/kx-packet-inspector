@@ -12,7 +12,7 @@
 # @category KX
 
 from ghidra.program.model.address import Address
-import os
+import os, re
 
 # --- Helper Functions ---
 
@@ -55,10 +55,130 @@ def u64(addr):
 def u32(addr):
     return getInt(addr) & 0xFFFFFFFF
 
+def is_ascii_like(s):
+    if not s or s in ("EMPTY", "READ_ERROR"):
+        return False
+    try:
+        return all(32 <= ord(c) <= 126 for c in s) and len(s) <= 128
+    except:
+        return False
+
+# --- Identifier and Type Sanitizers ---
+
+IDENT_OK_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+TYPE_SAFE_CHARS_RE = re.compile(r"^[A-Za-z0-9_:\*\&\[\]<> ]+$")
+
+# Allow these tokens verbatim as part of a type
+PRIMITIVE_TYPES = {
+    "bool", "char", "signed char", "unsigned char",
+    "short", "unsigned short",
+    "int", "unsigned int",
+    "long", "unsigned long",
+    "long long", "unsigned long long",
+    "float", "double", "long double",
+    "void", "void*"
+}
+QUALIFIERS = {"const", "volatile"}
+ALLOWED_PREFIXES = (
+    "hk", "hkp", "hkx", "hka", "hkcd", "hkai", "hkRef", "hkArray", "hkString",
+    "std"
+)
+
+def sanitize_cpp_identifier(name, fallback):
+    """
+    Make a safe C++ identifier for fields or class names.
+    If the cleaned name is empty or invalid, use fallback.
+    """
+    if not name:
+        return fallback
+
+    clean = re.sub(r"[^A-Za-z0-9_]", "_", name)
+    clean = re.sub(r"_+", "_", clean).strip("_")
+
+    if clean and clean[0].isdigit():
+        clean = "_" + clean
+
+    if not clean or not IDENT_OK_RE.match(clean):
+        return fallback
+
+    return clean[:128]
+
+def is_valid_type_ident_token(tok):
+    """
+    Accept realistic identifier tokens that could appear in a C++ type.
+    Reject one letter junk and odd lowercase blobs like 'pm4B', 'xc4B'.
+    """
+    if tok in PRIMITIVE_TYPES or tok in QUALIFIERS:
+        return True
+    if not IDENT_OK_RE.match(tok):
+        return False
+    # Must be at least 2 chars to avoid 'P', 'x' noise
+    if len(tok) < 2:
+        return False
+    # Accept if it starts with uppercase (e.g., Havok classes), or allowed prefixes
+    if tok[0].isupper():
+        return True
+    for pref in ALLOWED_PREFIXES:
+        if tok.startswith(pref):
+            return True
+    return False
+
+def is_plausible_type_string(s):
+    """
+    Conservative filter for type names coming from strings.
+    """
+    if not s or s in ("EMPTY", "READ_ERROR"):
+        return False
+    s = s.strip()
+    if s in PRIMITIVE_TYPES:
+        return True
+    if not TYPE_SAFE_CHARS_RE.match(s):
+        return False
+    if not re.search(r"[A-Za-z]", s):
+        return False
+    return True
+
+def sanitize_cpp_type_name(name, fallback):
+    """
+    Keep a readable but safe C++ type name, allowing namespaces and pointer/reference syntax.
+    If invalid, return fallback.
+    """
+    if not name:
+        return fallback
+
+    s = " ".join(name.split())
+
+    if s in PRIMITIVE_TYPES:
+        return s
+
+    if not is_plausible_type_string(s):
+        return fallback
+
+    # Tokenize around operators and separators
+    tokens = re.split(r"(\s+|::|<|>|,|\[|\]|\*+|&+)", s)
+    out = []
+    for t in tokens:
+        if not t:
+            continue
+        if t.isspace() or t in ("::", "<", ">", ",", "[", "]"):
+            out.append(t)
+            continue
+        # Jython safe equivalent of re.fullmatch
+        if re.match(r"^(?:\*+|&+)$", t):
+            out.append(t)
+            continue
+        if is_valid_type_ident_token(t):
+            out.append(t)
+            continue
+        # Unknown token, bail to fallback
+        return fallback
+
+    result = "".join(out).strip()
+    return result if result else fallback
+
 # --- Type Decoding Logic ---
 
 # Educated guess for common Tag IDs to C++ type mapping.
-# These are based on the sizes observed in Reflect_GenericCopyDispatcher and Reflect_MemmoveDispatcher.
 TAG_ID_TO_CPP_TYPE_MAP = {
     0x1: "bool",        # 1-byte operations
     0x2: "short",       # 2-byte operations
@@ -81,19 +201,25 @@ def decode_type_data(type_data_val):
 
 def describe_type(signature_or_type_val):
     """
-    Creates a human-readable description of a member's type.
+    Creates a human readable description of a member's type with sanitization.
     Attempts to infer C++ types based on common Tag IDs and by reading strings.
     """
-    # 1) Try to read as a C-string
-    type_str = read_c_string(signature_or_type_val)
-    if type_str and type_str != "READ_ERROR" and type_str != "EMPTY":
-        return type_str
+    # 0 is commonly used for no tag
+    if signature_or_type_val == 0:
+        return "unknown_t"
 
-    # 2) If not a string, check known primitive type IDs
+    # Try as C string then sanitize strictly
+    type_str = read_c_string(signature_or_type_val)
+    if type_str and type_str not in ("READ_ERROR", "EMPTY"):
+        safe = sanitize_cpp_type_name(type_str, None)
+        if safe:
+            return safe
+
+    # Try as known primitive tag id
     if signature_or_type_val in TAG_ID_TO_CPP_TYPE_MAP:
         return TAG_ID_TO_CPP_TYPE_MAP[signature_or_type_val]
 
-    # 3) Fallback
+    # Fallback to opaque tag
     return "TypeTag_0x{:X}".format(signature_or_type_val)
 
 # --- Main Dumper Logic ---
@@ -123,14 +249,15 @@ def dump_class_layouts(start_ptr, end_ptr, output_file):
         member_list_ptr = u64(cur.add(0x18))
         num_members     = u32(cur.add(0x20))
 
-        class_name = read_c_string(class_name_ptr)
-        if not class_name:
-            class_name = "Class_0x{:X}".format(class_name_ptr)
+        class_name_raw = read_c_string(class_name_ptr)
+        if not is_ascii_like(class_name_raw):
+            class_name_raw = "Class_0x{:X}".format(class_name_ptr)
+        class_name = sanitize_cpp_identifier(class_name_raw, "Class_0x{:X}".format(class_name_ptr))
 
-        parent_name = read_c_string(parent_name_ptr)
-        # Prevent self-inheritance in output
-        if not parent_name or parent_name == class_name:
-            parent_name = None
+        parent_name_raw = read_c_string(parent_name_ptr)
+        if not is_ascii_like(parent_name_raw) or parent_name_raw == class_name_raw:
+            parent_name_raw = None
+        parent_name = sanitize_cpp_identifier(parent_name_raw, "Base") if parent_name_raw else None
 
         output_file.write("//----------------------------------------------------\n")
         output_file.write("// Class: {} (Initializer @ {})\n".format(class_name, cur))
@@ -143,25 +270,48 @@ def dump_class_layouts(start_ptr, end_ptr, output_file):
         if num_members > 0 and is_valid_read_ptr(member_list_ptr):
             mbase = toAddr(member_list_ptr)
             for i in range(num_members):
-                entry_addr = mbase.add(i * member_stride)
+                try:
+                    entry_addr = mbase.add(i * member_stride)
 
-                # Read the MemberInitializer (FieldDecl) structure
-                signature_or_type_ptr = u64(entry_addr.add(0x00))
-                name_ptr              = u64(entry_addr.add(0x08))
-                type_data_or_offset   = u64(entry_addr.add(0x10))
+                    # Read MemberInitializer fields
+                    signature_or_type_ptr = u64(entry_addr.add(0x00))
+                    name_ptr              = u64(entry_addr.add(0x08))
+                    type_data_or_offset   = u64(entry_addr.add(0x10))
 
-                field_name = read_c_string(name_ptr)
-                if not field_name:
-                    field_name = "member_0x{:X}".format(name_ptr)
+                    # Decode offset and flags first, so field_offset exists before writing
+                    field_offset, type_flags = decode_type_data(type_data_or_offset)
 
-                field_offset, type_flags = decode_type_data(type_data_or_offset)
-                type_name = describe_type(signature_or_type_ptr)
+                    # Field name sanitize
+                    field_name_raw = read_c_string(name_ptr)
+                    if not is_ascii_like(field_name_raw):
+                        field_name_raw = None
+                    # Nuke artifacts like pm4B, xc4B, t4B, xb4B
+                    if field_name_raw and re.match(r"^[a-z]{1,3}[0-9a-f]{1,4}B$", field_name_raw):
+                        field_name_raw = None
+                    fallback_field = "member_0x{:X}".format(name_ptr)
+                    safe_field_name = sanitize_cpp_identifier(field_name_raw, fallback_field)
 
-                # Write the C++ style member definition
-                output_file.write("    /* 0x{:04X} */ {:<40} {}; // Flags: 0x{:04X}\n".format(
-                    field_offset, type_name, field_name, type_flags))
+                    # Type name sanitize
+                    type_name_raw = describe_type(signature_or_type_ptr)
+                    safe_type_name = sanitize_cpp_type_name(type_name_raw, "unknown_t")
+                    # Nuke the same artifact pattern on types
+                    if re.match(r"^[a-z]{1,3}[0-9a-f]{1,4}B$", safe_type_name):
+                        safe_type_name = "unknown_t"
 
-                member_count += 1
+                    # Write the member line
+                    output_file.write(
+                        "    /* 0x{:04X} */ {:<40} {}; // Flags: 0x{:04X}\n".format(
+                            field_offset, safe_type_name, safe_field_name, type_flags
+                        )
+                    )
+                    member_count += 1
+
+                except MemoryAccessException:
+                    output_file.write("    // Read error in member list at entry {}\n".format(i))
+                    break
+                except Exception as e:
+                    output_file.write("    // Exception at entry {}: {}\n".format(i, e))
+                    break
 
         output_file.write("};\n\n")
 
