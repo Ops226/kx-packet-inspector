@@ -1,20 +1,25 @@
-# Engine Internals: The ArenaNet `hkReflect` System
+# Engine Internals: The ArenaNet `hkReflect` Runtime System
 
 **Status:** Confirmed (Evidence-Based Analysis)
 
-This document outlines the core principles of the proprietary reflection system used in the Guild Wars 2 game engine. The findings are the result of an extensive forensic analysis of the `Gw2-64.exe` binary.
+This document outlines the core principles of a specific **runtime reflection system** used in the Guild Wars 2 game engine. The findings are the result of an extensive forensic analysis of the `Gw2-64.exe` binary.
 
-This system is the blueprint for the game's object model, defining the memory layout, inheritance, and member variables for hundreds of core engine and gameplay classes.
+This system is the blueprint for the game's runtime object model, defining the memory layout, inheritance, and member variables for hundreds of core engine and gameplay classes.
 
 > **Related Tools:** See the reflection dumper scripts used to extract and analyze this data:
 > - [Static Addresses Dumper](../../tools/ghidra/KX_ReflectionDumper_StaticAddresses.py)
 > - [Dynamic Scan Dumper](../../tools/ghidra/KX_ReflectionDumper_DynamicScan.py)
 
-## Core Discovery: A Custom `hkReflect` System
+## Core Discovery: Multiple Havok Systems
 
-Initial analysis of the binary suggested the use of a standard Havok `hkClass`/`hkClassMember` reflection system. However, this was proven incorrect. The game engine uses a separate, more modern, and likely customized system based on a different Havok namespace: **`hkReflect`**.
+Initial analysis of the binary can be misleading, as the engine utilizes **multiple, distinct, Havok-based systems** for managing its data. It is now understood that there is a clear separation between the system used for file storage and the one used for runtime object representation.
 
-* **Evidence:** The executable is rich with strings referencing this system, such as `hkReflect::Type`, `hkReflect::FieldDecl`, `hkReflect::TypeReg`, `ReflectStrings`, and even `ReflectionInterface.dll`. This confirms that a complete, parallel reflection stack is present.
+1.  **File Serialization System:** Used for reading and writing game asset files. This system is responsible for handling the Havok Packfile (`.pf`) format used in the game's `.dat` archive. This is the system primarily documented by community tools like `gw2_reverse` and `gw2formats`.
+2.  **Runtime Reflection System (`hkReflect`):** This is a separate, more modern system based on the `hkReflect` namespace. Its purpose appears to be runtime type-checking, object management, and powering high-level engine features like the internal developer UI.
+
+**This document focuses exclusively on the second system: the `hkReflect` runtime engine.**
+
+* **Evidence:** The executable is rich with strings referencing this specific system, such as `hkReflect::Type`, `hkReflect::FieldDecl`, `hkReflect::TypeReg`, `ReflectStrings`, and even `ReflectionInterface.dll`. This confirms that a complete, parallel reflection stack is present for runtime purposes, separate from file serialization.
 
 ## Key Architectural Findings
 
