@@ -64,9 +64,7 @@ This structure describes a single variable within a class.
 | :------ | :------------ | :----------------- | :---------------------------------------------------------------------- |
 | `+0x00` | `longlong`    | `signatureOrType`  | A "tagged" value. Can be a small integer (a type ID) or a pointer.      |
 | `+0x08` | `const char*` | `namePtr`          | A pointer to a null-terminated string with the member's name.           |
-| `+0x10` | `longlong`    | `typeDataOrOffset` | A "tagged" value containing type data, flags, and/or the memory offset. |
-
-| `+0x10` | `longlong`    | `typeDataOrOffset` | A 64-bit bitfield. The lower 16 bits are the field's memory offset. |
+| `+0x10` | `longlong`    | `typeDataOrOffset` | A "tagged" value containing type data, flags, and/or the memory offset. This is a 64-bit bitfield where the lower 16 bits represent the field's memory offset. |
 
 ## Advanced Insights and Future Work
 
