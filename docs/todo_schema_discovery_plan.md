@@ -19,10 +19,23 @@ The goal is to find the master table that maps CMSG opcodes to their correspondi
 1.  **Analyze the CMSG Resolver Function:**
     *   **Task:** Perform a detailed static analysis of the resolver function (`FUN_140fd5b50`) identified in `CMSG::BuildAndSendPacket.c`.
     *   **Goal:** Determine how it performs its lookup (e.g., direct array access, hash map).
+    *   **Status: COMPLETED**
+    *   **Analysis:** The function `FUN_140fd5b50` is a simple resolver that performs a direct array lookup. It takes a pointer to a `SchemaTableInfo` structure and an `opcode` as arguments.
+        *   It uses `*(SchemaTableInfo + 0x5c)` as the number of entries in the table to perform a bounds check on the `opcode`.
+        *   It uses `*(SchemaTableInfo + 0x50)` as the base address of the lookup table.
+        *   It calculates the entry address as `base_address + opcode * 0x10`. Each entry is 16 bytes.
+        *   It checks for a non-null schema pointer at offset `+8` within the entry.
+        *   If valid, it returns a pointer to the 16-byte entry structure itself.
 
 2.  **Dump the Master CMSG Table:**
     *   **Task:** Once the lookup mechanism is understood, locate the master data table it uses.
     *   **Goal:** Write a script (e.g., Ghidra script) to dump this table, creating a definitive list of `Opcode -> Schema Address`.
+    *   **Status: COMPLETED**
+    *   **Findings:**
+        *   **Table Base Address:** `0x000002BE68192490` (live address)
+        *   **Table Size:** `521` entries
+        *   **Entry Size:** `16` bytes
+        *   **Action:** A script can now be created to iterate `521` times from the base address. For each 16-byte entry, the script should read the schema pointer at offset `+8` to build the full `Opcode -> Schema Address` map.
 
 3.  **Systematic Documentation:**
     *   **Task:** Use the dumped table as a worklist. For each known schema, find its cross-references to identify its builder function(s).
