@@ -25,7 +25,7 @@ For a high-level visual overview of the client's network communication with the 
 ## Getting Started & Common Workflows
 
 *   **To understand the overall network architecture, start with [System Architecture](./system-architecture.md).**
-*   To find a specific packet, see the main **[Packet Reference](./packets/README.md)**.
+*   To find a specific packet, see the main **[Game Protocol Reference](./protocols/game/README.md)**.
 *   For the step-by-step process of discovering new packets, consult the **[Discovery Playbooks](./methodologies/discovery_playbooks/README.md)**.
 *   For a guide on recovering function names from the executable, see **[Function Naming from Assert Strings](./methodologies/function-naming-from-assert-strings.md)**.
 *   As a supplementary technique for validating findings with live memory, see the **[Memory Correlation Workflow](./methodologies/memory-correlation-workflow.md)**.

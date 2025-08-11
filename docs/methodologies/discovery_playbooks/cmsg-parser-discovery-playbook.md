@@ -32,7 +32,7 @@ These addresses can change with game updates. The first step is always to find t
 
 ### Step 1.2: Dump the Opcode-to-Schema Table
 
-With the live base address and size, use the provided LUA script (`tools/cheat-engine/CE_CMSG_SchemaDumper.lua`) to print the complete `Opcode -> Schema Address` mapping.
+With the live base address and size, use the provided LUA script (`../../tools/cheat-engine/CE_CMSG_SchemaDumper.lua`) to print the complete `Opcode -> Schema Address` mapping.
 
 ---
 

@@ -29,7 +29,7 @@ The Login Protocol is the first of the three major network systems the client in
 
 ### 2. `GcAuthCmd` (The Packet Builders)
 
-*   **Evidence:** `docs/raw_decompilations/cmsg/login/GcAuthCmd_PacketBuilders.c`
+*   **Evidence:** `../../raw_decompilations/cmsg/login/GcAuthCmd_PacketBuilders.c`
 *   **Role:** This is a collection of dozens of small, single-purpose functions. Each function is responsible for building and sending one specific Client-to-Login-Server (`c2ls`) packet. By analyzing these functions, the opcodes and payloads for the entire authentication sequence can be reverse-engineered.
 
 ## Discovered `c2ls` Packets

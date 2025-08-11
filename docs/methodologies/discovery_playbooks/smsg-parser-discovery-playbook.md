@@ -4,7 +4,7 @@
 
 ## Objective
 
-This document provides a concise, repeatable method for discovering Server-to-Client (SMSG) packet structures based on the confirmed **dynamic dispatch system**. This playbook supersedes all previous versions and is aligned with the dynamic architecture described in `system-architecture.md`. **Static analysis alone is not sufficient** for handler discovery.
+This document provides a concise, repeatable method for discovering Server-to-Client (SMSG) packet structures based on the confirmed **dynamic dispatch system**. This playbook supersedes all previous versions and is aligned with the dynamic architecture described in `../../system-architecture.md`. **Static analysis alone is not sufficient** for handler discovery.
 
 ## Scope and Constraints
 
@@ -70,7 +70,7 @@ Now, switch to your static analysis tool (Ghidra).
 
 ### Phase 3: Decode the Schema and Understand Handler Logic
 
-1.  **Decode the Schema:** Navigate to the schema's data address in Ghidra. Use the typecode definitions from `system-architecture.md` to determine the exact layout of the packet's parsed data.
+1.  **Decode the Schema:** Navigate to the schema's data address in Ghidra. Use the typecode definitions from `../../system-architecture.md` to determine the exact layout of the packet's parsed data.
 2.  **Analyze Handler Logic:** With the schema structure known, analyze the decompiled code of the handler function you discovered. This will reveal the semantic meaning of the packet's fields by observing how the handler uses the parsed data.
 
     **Note on Fast Path Handlers:** For high-frequency packets that use the "Fast Path" (like `SMSG_AGENT_UPDATE_BATCH`), the dynamically discovered handler (e.g., `Event::PreHandler_Stub_0x88`) is a *notification stub* that is called *after* the packet has already been parsed by hardcoded logic inside `Msg::DispatchStream`. Do not look for parsing logic in these stubs; it resides in the dispatcher itself.

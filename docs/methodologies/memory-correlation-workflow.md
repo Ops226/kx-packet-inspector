@@ -2,7 +2,7 @@
 
 This document describes the Memory Correlation Method, a foundational technique for reverse engineering game packets.
 
-While the project now primarily relies on more advanced static analysis (see the [Packet Parser Discovery Playbook](./packet-parser-discovery-playbook.md)), this method is an excellent starting point for beginners and remains a powerful tool for validating findings from static analysis.
+While the project now primarily relies on more advanced static analysis (see the [Packet Parser Discovery Playbook](./discovery_playbooks/smsg-parser-discovery-playbook.md)), this method is an excellent starting point for beginners and remains a powerful tool for validating findings from static analysis.
 
 ## Core Philosophy
 

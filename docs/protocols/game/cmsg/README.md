@@ -14,7 +14,6 @@ For packets that have a known schema or builder but have not been observed or co
 | `0x0004` | Movement End | [CMSG_0x0004_MOVEMENT_END.md](./CMSG_0x0004_MOVEMENT_END.md) |
 | `0x0009` | Jump | [CMSG_0x0009_JUMP.md](./CMSG_0x0009_JUMP.md) |
 | `0x000B` | Movement with Rotation | [CMSG_0x000B_MOVEMENT_WITH_ROTATION.md](./CMSG_0x000B_MOVEMENT_WITH_ROTATION.md) |
-| `0x0011` | Heartbeat / Unknown | [CMSG_0x0011_HEARTBEAT.md](./CMSG_0x0011_HEARTBEAT.md) |
 | `0x0012` | Movement | [CMSG_0x0012_MOVEMENT.md](./CMSG_0x0012_MOVEMENT.md) |
 | `0x0017` | Use Skill | [CMSG_0x0017_USE_SKILL.md](./CMSG_0x0017_USE_SKILL.md) |
 | `0x0018` | Mount Movement | [CMSG_0x0018_MOUNT_MOVEMENT.md](./CMSG_0x0018_MOUNT_MOVEMENT.md) |
