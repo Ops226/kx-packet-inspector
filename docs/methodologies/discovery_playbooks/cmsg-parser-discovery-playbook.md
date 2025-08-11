@@ -84,3 +84,45 @@ Create or update the markdown file for the packet.
 *   Describe the full construction chain, from the high-level aggregator down to the serialization call.
 *   Provide the confirmed on-wire packet structure, validated against live captures.
 *   Link to the key decompiled functions as evidence.
+
+---
+
+## Future Improvements: Automating Builder Discovery
+
+The manual workflow described in this document is reliable but time-consuming, requiring a separate debugging session for each opcode. Based on the discovery of the unified `CMSG::BuildAndSendPacket` function, a more advanced, automated approach is possible.
+
+### TODO: Implement a "Builder Discovery" Hook
+
+The next evolution of the KX Packet Inspector tool should be to automate the process of mapping opcodes to their high-level aggregator functions.
+
+**Proposed Method:**
+
+1.  **Target Function:** Instead of hooking a low-level write primitive, the tool should hook the central serialization function, **`CMSG::BuildAndSendPacket`**.
+2.  **Hook Logic (Detour):** The detour function for this hook would perform the following actions:
+    *   **Extract Opcode:** Read the first two bytes from the packet data buffer passed into the function to get the `opcode`.
+    *   **Get Caller Address:** Use a compiler intrinsic (like `_ReturnAddress()` in MSVC) to get the memory address of the function that *called* `CMSG::BuildAndSendPacket`. This address points directly to the generic builder (`FUN_141018E00`). To find the *aggregator*, the tool would need to walk the call stack one or two levels higher.
+    *   **Log the Mapping:** Write the `[Opcode -> Aggregator Address]` pair to a dedicated log file.
+
+**Pseudo-Code Example:**
+```cpp
+// Detour for the CMSG::BuildAndSendPacket function
+void Detour_CMSG_BuildAndSendPacket(byte* pMsgConnContext, uint size, ushort* pPacketData) {
+    
+    // 1. Get the Opcode from the packet data.
+    uint16_t opcode = *pPacketData;
+
+    // 2. Get the address of the high-level aggregator from the call stack.
+    // This requires a stack walking utility.
+    void* aggregatorAddress = GetCallerAddressFromStack(2); // Example: walk up 2 frames
+
+    // 3. Log the discovered relationship.
+    LogToFile("[Builder Discovery] Opcode: 0x%04X -> Aggregator: %p\n", opcode, aggregatorAddress);
+
+    // 4. Call the original function to maintain game functionality.
+    original_CMSG_BuildAndSendPacket(pMsgConnContext, size, pPacketData);
+}
+```
+
+**Benefit:**
+
+By implementing this, the discovery process would change from a manual, one-by-one hunt into a bulk data collection task. A user could simply play the game for a few minutes, performing various actions, and the tool would automatically generate a near-complete map of which high-level functions are responsible for building which CMSG packets. This would accelerate the documentation of the remaining CMSG protocol exponentially.
