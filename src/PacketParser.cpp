@@ -7,16 +7,44 @@
 
 namespace kx::Parsing {
 
+    // Forward declarations
+    std::optional<std::string> ParseMovementPacket(const kx::PacketInfo& packet);
+    std::optional<std::string> ParsePlayerStateUpdatePacket(const kx::PacketInfo& packet);
+    std::optional<std::string> ParseTimeSyncPacket(const kx::PacketInfo& packet);
+    std::optional<std::string> ParsePerformanceResponsePacket(const kx::PacketInfo& packet);
+    std::optional<std::string> ParseDeselectAgentPacket(const kx::PacketInfo& packet);
+    std::optional<std::string> ParseLogoutPacket(const kx::PacketInfo& packet);
+    std::optional<std::string> ParseSelectAgentPacket(const kx::PacketInfo& packet);
+    std::optional<std::string> ParseInteractWithAgentPacket(const kx::PacketInfo& packet);
+    std::optional<std::string> ParseServerCommandPacket(const kx::PacketInfo& packet);
+    std::optional<std::string> ParseSessionTickPacket(const kx::PacketInfo& packet);
+    std::optional<std::string> ParseHeartbeatPacket(const kx::PacketInfo& packet);
+    std::optional<std::string> ParseInteractionResponsePacket(const kx::PacketInfo& packet);
+
     // Central dispatcher function
     std::optional<std::string> GetParsedDataTooltipString(const kx::PacketInfo& packet) {
         // Dispatch based on packet header ID and direction
         switch (packet.direction) {
         case kx::PacketDirection::Sent:
             switch (packet.rawHeaderId) {
+            case static_cast<uint16_t>(kx::CMSG_HeaderId::SESSION_TICK):
+                return ParseSessionTickPacket(packet);
+            case static_cast<uint16_t>(kx::CMSG_HeaderId::PERFORMANCE_RESPONSE):
+                return ParsePerformanceResponsePacket(packet);
+            case static_cast<uint16_t>(kx::CMSG_HeaderId::HEARTBEAT):
+                return ParseHeartbeatPacket(packet);
             case static_cast<uint16_t>(kx::CMSG_HeaderId::MOVEMENT):
                 return ParseMovementPacket(packet);
-            case static_cast<uint16_t>(kx::CMSG_HeaderId::AGENT_LINK):
-                return ParseAgentLinkPacket(packet);
+            case static_cast<uint16_t>(kx::CMSG_HeaderId::LOGOUT_TO_CHAR_SELECT):
+                return ParseLogoutPacket(packet);
+            case static_cast<uint16_t>(kx::CMSG_HeaderId::DESELECT_AGENT):
+                return ParseDeselectAgentPacket(packet);
+            case static_cast<uint16_t>(kx::CMSG_HeaderId::SELECT_AGENT):
+                return ParseSelectAgentPacket(packet);
+            case static_cast<uint16_t>(kx::CMSG_HeaderId::INTERACT_WITH_AGENT):
+                return ParseInteractWithAgentPacket(packet);
+            case static_cast<uint16_t>(kx::CMSG_HeaderId::INTERACTION_RESPONSE):
+                return ParseInteractionResponsePacket(packet);
             default:
                 return std::nullopt; // No parser for this CMSG packet
             }
@@ -28,6 +56,8 @@ namespace kx::Parsing {
                 return ParsePlayerStateUpdatePacket(packet);
             case static_cast<uint16_t>(kx::SMSG_HeaderId::TIME_SYNC):
                 return ParseTimeSyncPacket(packet);
+            case static_cast<uint16_t>(kx::SMSG_HeaderId::SERVER_COMMAND):
+                return ParseServerCommandPacket(packet);
             default:
                 return std::nullopt; // No parser for this SMSG packet
             }
@@ -145,28 +175,180 @@ namespace kx::Parsing {
         return ss.str();
     }
 
-    // Specific parser for CMSG_AGENT_LINK packets
-    std::optional<std::string> ParseAgentLinkPacket(const kx::PacketInfo& packet) {
+    std::optional<std::string> ParsePerformanceResponsePacket(const kx::PacketInfo& packet) {
         if (packet.direction != kx::PacketDirection::Sent ||
-            packet.rawHeaderId != static_cast<uint16_t>(kx::CMSG_HeaderId::AGENT_LINK)) {
+            packet.rawHeaderId != static_cast<uint16_t>(kx::CMSG_HeaderId::PERFORMANCE_RESPONSE)) {
+            return std::nullopt;
+        }
+        const auto& data = packet.data;
+        if (data.size() == 3) {
+            return "Performance Response (Heartbeat Variant)";
+        }
+        if (data.size() >= 6) {
+            uint32_t perf_value;
+            std::memcpy(&perf_value, data.data() + 2, sizeof(uint32_t));
+            std::stringstream ss;
+            ss << "Performance Response Payload:\n"
+               << "  Perf Value: " << perf_value;
+            return ss.str();
+        }
+        return "Performance Response (Unknown Variant)";
+    }
+
+    std::optional<std::string> ParseDeselectAgentPacket(const kx::PacketInfo& packet) {
+        if (packet.direction != kx::PacketDirection::Sent ||
+            packet.rawHeaderId != static_cast<uint16_t>(kx::CMSG_HeaderId::DESELECT_AGENT)) {
+            return std::nullopt;
+        }
+        if (packet.data.size() == 3 && packet.data[2] == 0x00) {
+            return "Deselect Agent: OK";
+        }
+        return "Deselect Agent: (Malformed)";
+    }
+
+    std::optional<std::string> ParseLogoutPacket(const kx::PacketInfo& packet) {
+        if (packet.direction != kx::PacketDirection::Sent ||
+            packet.rawHeaderId != static_cast<uint16_t>(kx::CMSG_HeaderId::LOGOUT_TO_CHAR_SELECT)) {
+            return std::nullopt;
+        }
+        if (packet.data.size() == 2) {
+            return "Logout to Character Select";
+        }
+        return "Logout to Character Select: (Malformed)";
+    }
+
+    std::optional<std::string> ParseSelectAgentPacket(const kx::PacketInfo& packet) {
+        if (packet.direction != kx::PacketDirection::Sent ||
+            packet.rawHeaderId != static_cast<uint16_t>(kx::CMSG_HeaderId::SELECT_AGENT)) {
             return std::nullopt;
         }
 
         const std::vector<uint8_t>& data = packet.data;
-        constexpr size_t required_size = sizeof(kx::Packets::CMSG_AgentLinkPayload);
+        // Opcode (2) + AgentID (2) + Unknown (2) + AgentID (2)
+        constexpr size_t required_size = 8;
 
         if (data.size() < required_size) {
             return std::nullopt;
         }
 
-        kx::Packets::CMSG_AgentLinkPayload payload;
-        std::memcpy(&payload, data.data(), required_size);
+        uint16_t agentId, unknown, agentId_repeat;
+        std::memcpy(&agentId, data.data() + 2, sizeof(uint16_t));
+        std::memcpy(&unknown, data.data() + 4, sizeof(uint16_t));
+        std::memcpy(&agentId_repeat, data.data() + 6, sizeof(uint16_t));
 
         std::stringstream ss;
-        ss << "Agent Link Payload:\n"
-           << "  Agent ID: 0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << payload.agentId << std::dec << "\n"
-           << "  Parent ID: 0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << payload.parentId << std::dec << "\n"
-           << "  Flags: 0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << payload.flags << std::dec;
+        ss << "Select Agent Payload:\n"
+           << "  Agent ID: 0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << agentId << std::dec;
+        if (agentId != agentId_repeat) {
+            ss << " (Mismatch: 0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << agentId_repeat << std::dec << ")";
+        }
+        ss << "\n  Unknown: 0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << unknown << std::dec;
+
+        return ss.str();
+    }
+
+    std::optional<std::string> ParseInteractWithAgentPacket(const kx::PacketInfo& packet) {
+        if (packet.direction != kx::PacketDirection::Sent ||
+            packet.rawHeaderId != static_cast<uint16_t>(kx::CMSG_HeaderId::INTERACT_WITH_AGENT)) {
+            return std::nullopt;
+        }
+
+        const std::vector<uint8_t>& data = packet.data;
+        constexpr size_t required_size = 4; // Opcode (2) + CommandID (2)
+
+        if (data.size() < required_size) {
+            return std::nullopt;
+        }
+
+        uint16_t commandId;
+        std::memcpy(&commandId, data.data() + 2, sizeof(uint16_t));
+
+        std::string command_desc = "Unknown";
+        switch (commandId) {
+            case 0x0001: command_desc = "Continue/Next"; break;
+            case 0x0002: command_desc = "Select Option"; break;
+            case 0x0004: command_desc = "Exit Dialogue"; break;
+        }
+
+        std::stringstream ss;
+        ss << "Interact With Agent Payload:\n"
+           << "  Command ID: 0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << commandId
+           << " (" << command_desc << ")";
+
+        return ss.str();
+    }
+
+    std::optional<std::string> ParseServerCommandPacket(const kx::PacketInfo& packet) {
+        if (packet.direction != kx::PacketDirection::Received ||
+            packet.rawHeaderId != static_cast<uint16_t>(kx::SMSG_HeaderId::SERVER_COMMAND)) {
+            return std::nullopt;
+        }
+
+        const std::vector<uint8_t>& data = packet.data;
+        if (data.size() < 2) {
+            return "Server Command: (Too small)";
+        }
+
+        uint16_t subtype;
+        std::memcpy(&subtype, data.data(), sizeof(uint16_t));
+
+        std::stringstream ss;
+        ss << "Server Command Payload:\n"
+           << "  Subtype: 0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << subtype << std::dec;
+
+        if (subtype == 0x0003) {
+            ss << " (Performance Trigger)";
+        } else if (subtype == 0x0004) {
+            ss << " (Ping Response Trigger)";
+            if (data.size() >= 6) {
+                uint32_t value;
+                std::memcpy(&value, data.data() + 2, sizeof(uint32_t));
+                ss << "\n  Value: 0x" << std::hex << std::uppercase << std::setw(8) << std::setfill('0') << value << std::dec;
+            }
+        }
+
+        return ss.str();
+    }
+
+    std::optional<std::string> ParseSessionTickPacket(const kx::PacketInfo& packet) {
+        if (packet.rawHeaderId != static_cast<uint16_t>(kx::CMSG_HeaderId::SESSION_TICK) || packet.data.size() < 6) {
+            return std::nullopt;
+        }
+        uint32_t timestamp;
+        std::memcpy(&timestamp, packet.data.data() + 2, sizeof(uint32_t));
+        std::stringstream ss;
+        ss << "Session Tick Payload:\n"
+           << "  Timestamp: " << timestamp;
+        return ss.str();
+    }
+
+    std::optional<std::string> ParseInteractionResponsePacket(const kx::PacketInfo& packet) {
+        if (packet.rawHeaderId != static_cast<uint16_t>(kx::CMSG_HeaderId::INTERACTION_RESPONSE) || packet.data.size() < 3) {
+            return std::nullopt;
+        }
+        if (packet.data[2] == 0x01) {
+            return "Interaction Response: OK";
+        }
+        return "Interaction Response: (Malformed)";
+    }
+
+    std::optional<std::string> ParseHeartbeatPacket(const kx::PacketInfo& packet) {
+        if (packet.direction != kx::PacketDirection::Sent ||
+            packet.rawHeaderId != static_cast<uint16_t>(kx::CMSG_HeaderId::HEARTBEAT)) {
+            return std::nullopt;
+        }
+
+        if (packet.data.size() < 4) {
+            return "Heartbeat: (Malformed, too small)";
+        }
+
+        uint16_t value;
+        // The data vector includes the opcode, so the value is at offset 2.
+        std::memcpy(&value, packet.data.data() + 2, sizeof(uint16_t));
+
+        std::stringstream ss;
+        ss << "Heartbeat Payload:\n"
+           << "  Value: 0x" << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << value;
 
         return ss.str();
     }

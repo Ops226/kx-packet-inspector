@@ -29,42 +29,67 @@ namespace kx {
 
     // --- Client->Server Header IDs ---
     enum class CMSG_HeaderId : uint16_t {
+        SESSION_TICK = 0x0001,
+        PERFORMANCE_RESPONSE = 0x0002,
         MOVEMENT_END = 0x0004,
+        PING_RESPONSE = 0x0006,
         JUMP = 0x0009,
         MOVEMENT_WITH_ROTATION = 0x000B,
         HEARTBEAT = 0x0011,
         MOVEMENT = 0x0012,
+        CONTEXT_MENU_REQUEST = 0x0014,
         USE_SKILL = 0x0017,
         MOUNT_MOVEMENT = 0x0018,
-		AGENT_LINK = 0x0036, // unsure, it's never sent by the client
+        LANDED = 0x001A,
+        LOGOUT_TO_CHAR_SELECT = 0x0023,
+        UNKNOWN_0x0024 = 0x0024,
+        UNKNOWN_0x0025 = 0x0025,
+        UNKNOWN_0x0028 = 0x0028,
+        UNKNOWN_0x002B = 0x002B,
+        AGENT_LINK = 0x0036,
+        SIMPLE_U32_0x0050 = 0x0050,
+        UNKNOWN_0x0051 = 0x0051,
+        UNKNOWN_0x005B = 0x005B,
+        UNKNOWN_0x005D = 0x005D,
+        UNKNOWN_0x005F = 0x005F,
+        UNKNOWN_0x0065 = 0x0065,
+        UNKNOWN_0x0068 = 0x0068,
+        UNKNOWN_0x0069 = 0x0069,
+        UNKNOWN_0x006A = 0x006A,
+        UNKNOWN_0x006B = 0x006B,
         DESELECT_AGENT = 0x00DD,
         SELECT_AGENT = 0x00E5,
         // Note: Values above 256 (0x0100) won't work with magic_enum
-        INTERACT_WITH_AGENT = 0x010E, // Likely: Player initiates interaction with an agent
-    	INTERACTION_RESPONSE = 0x010F, // Likely: Player selects dialogue option / continues interaction
+        CHAT_MESSAGE = 0x0100,
+        INTERACT_WITH_AGENT = 0x010E,
+        INTERACTION_RESPONSE = 0x010F,
+        CLIENT_STATE_SYNC = 0x0113,
     };
+
 
     // --- Server->Client Header IDs ---
     enum class SMSG_HeaderId : uint16_t {
-        PLAYER_STATE_UPDATE = 0x0002, // Periodic update related to player (idle anim, resources, pos confirm?)
-        PERFORMANCE_MSG = 0x0008, // Pretty sure
-        INTERACTION_DIALOGUE = 0x000F, // Highly likely: Multi-part message sequence for NPC dialogue/interaction data
-        UI_MESSAGE = 0x0014, // Tentative: UI state, notifications, chat, mail headers?
-        PLAYER_DATA_UPDATE = 0x0015, // Likely: Currency, inventory changes, achievements
-        AGENT_STATE_BULK = 0x0016, // Likely: Bulk agent states/effects (similar to 0x001C?)
-        SKILL_UPDATE = 0x0017, // Likely: Skill bar, cooldowns, action results
-        CONFIG_UPDATE = 0x001A, // Tentative: Settings/configuration sync (map load?)
-        AGENT_EFFECT_UPDATE = 0x001C, // Likely related to effects, status, or interactions involving agents
-        MAP_DATA_BLOCK = 0x0020, // Likely: Loading map objects, entities, terrain data block
-        PET_INFO = 0x0021, // Tentative: Initial pet/minion state on map load?
-        MAP_DETAIL_INFO = 0x0023, // Likely: Detailed info for specific map points/elements (often paired packets)
-        MAP_LOAD_STATE = 0x0026, // Likely: Map loading sequence/status updates
-        AGENT_ATTRIBUTE_UPDATE = 0x0028, // Tentative: Agent stats, buffs/debuffs?
-        AGENT_APPEARANCE = 0x002B, // Likely: Agent visuals, equipment loading
-        AGENT_SYNC = 0x0034, // Likely: Periodic sync of multiple nearby agents' pos/state
-        AGENT_LINK = 0x0036, // Tentative: Linking agents (target, relationship?)
-        SOCIAL_UPDATE = 0x0039, // Tentative: Guild, party, friends list update?
-        TIME_SYNC = 0x003F, // Periodic server tick/time update
+        AGENT_UPDATE_BATCH = 0x0001,    // Confirmed: Container for many agent-related events
+        PLAYER_STATE_UPDATE = 0x0002,   // Confirmed: Periodic state update for the player
+        PERFORMANCE_MSG = 0x0008,       // Unconfirmed
+        INTERACTION_DIALOGUE = 0x000F,  // Unconfirmed: Multi-part message sequence for NPC dialogue
+        UI_MESSAGE = 0x0014,            // Unconfirmed: UI state, notifications, chat, etc.
+        PLAYER_DATA_UPDATE = 0x0015,    // Unconfirmed: Currency, inventory, achievements
+        AGENT_STATE_BULK = 0x0016,      // Unconfirmed: Bulk agent states/effects
+        SKILL_UPDATE = 0x0017,          // Unconfirmed: Skill bar, cooldowns, action results
+        CONFIG_UPDATE = 0x001A,         // Unconfirmed: Settings/configuration sync
+        AGENT_EFFECT_UPDATE = 0x001C,   // Unconfirmed: Agent effects, status, or interactions
+        MAP_DATA_BLOCK = 0x0020,        // Unconfirmed: Map geometry, entities, terrain data
+        PET_INFO = 0x0021,              // Unconfirmed: Pet/minion state
+        MAP_DETAIL_INFO = 0x0023,       // Unconfirmed: Detailed info for specific map elements
+        MAP_LOAD_STATE = 0x0026,        // Unconfirmed: Map loading sequence/status updates
+        SERVER_COMMAND = 0x0027,        // Confirmed: Server-initiated command (e.g., ping/perf check)
+        AGENT_ATTRIBUTE_UPDATE = 0x0028,// Unconfirmed: Agent stats, buffs/debuffs
+        AGENT_APPEARANCE = 0x002B,      // Unconfirmed: Agent visuals, equipment loading
+        AGENT_SYNC = 0x0034,            // Unconfirmed: Periodic sync of multiple nearby agents
+        AGENT_LINK = 0x0036,            // Unconfirmed: Linking agents (target, relationship?)
+        SOCIAL_UPDATE = 0x0039,         // Unconfirmed: Guild, party, friends list update
+        TIME_SYNC = 0x003F,             // Confirmed: Periodic server tick/time update
     };
 
 
