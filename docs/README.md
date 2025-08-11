@@ -14,9 +14,9 @@ For a high-level visual overview of the client's network communication with the 
 
 *   **[System Architecture](./system-architecture.md):** A high-level overview of the entire network message processing system, covering the three-server architecture (Login, Platform, Game) and detailing both incoming (SMSG) and outgoing (CMSG) packet pipelines.
 
-*   **[Packets](./packets/README.md):** Detailed, evidence-backed analysis of specific packet families and their variants. This section is the primary reference for all reverse-engineered network messages.
-    *   **[Server-to-Client (SMSG) Packets](./packets/smsg/README.md)**
-    *   **[Client-to-Server (CMSG) Packets](./packets/cmsg/README.md)**
+*   **Game Server Packets:** Detailed, evidence-backed analysis of specific packet families and their variants. This section is the primary reference for all reverse-engineered network messages.
+    *   **[Server-to-Client (SMSG) Packets](./protocols/game/smsg/README.md)**
+    *   **[Client-to-Server (CMSG) Packets](./protocols/game/cmsg/README.md)**
 
 *   **[Methodologies](./methodologies/README.md):** Guides and playbooks for reverse engineering the game client. These documents provide the step-by-step processes used to discover the information in this repository.
 
@@ -28,6 +28,6 @@ For a high-level visual overview of the client's network communication with the 
 *   To find a specific packet, see the main **[Game Protocol Reference](./protocols/game/README.md)**.
 *   For the step-by-step process of discovering new packets, consult the **[Discovery Playbooks](./methodologies/discovery_playbooks/README.md)**.
 *   For a guide on recovering function names from the executable, see **[Function Naming from Assert Strings](./methodologies/function-naming-from-assert-strings.md)**.
-*   As a supplementary technique for validating findings with live memory, see the **[Memory Correlation Workflow](./methodologies/memory-correlation-workflow.md)**.
+
 
 We hope this documentation provides valuable insights and aids in your exploration of Guild Wars 2's internals.
