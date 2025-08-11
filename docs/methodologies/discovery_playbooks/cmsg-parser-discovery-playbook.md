@@ -1,74 +1,63 @@
-# Packet Parser Discovery Playbook (CMSG Workflow)
+# CMSG Packet Discovery Playbook (Live-Validation Workflow)
 
-**Date:** 2025-08-05
+**Status:** Confirmed & Validated Workflow
 
 ## Objective
 
-This document provides a concise, repeatable method for discovering Client-to-Server (CMSG) packet structures. This playbook is a companion to the SMSG playbook and aligns with the architecture described in `system-architecture.md`.
+This document provides the definitive, repeatable method for discovering and validating any Client-to-Server (CMSG) packet structure. This workflow is based on a dynamic-first approach that prioritizes live traffic and call stack analysis to correctly identify the true origin of a packet.
 
-## Scope and Constraints
+## Core Principle: Two Serialization Systems
 
-*   **Environment:** Ghidra CodeBrowser on `Gw2-64.exe` for static analysis. A debugger (e.g., Cheat Engine) is required for dynamic verification of observed packet behavior.
-*   **Methodology:** A hybrid approach combining static analysis (tracing calls from core builder/queueing functions) with dynamic observation of emitted packets.
-*   **Evidence:** All findings should be backed by references to the relevant functions and data structures in the decompiled code and confirmed by live network logs.
+The client uses two distinct pathways for building outgoing packets. The key to successful analysis is to determine which pathway a packet uses.
 
-## Core Concepts
+1.  **Schema-Driven Path:** For complex or data-rich packets. A high-level function calls a generic builder (`CMSG::BuildAndSendPacket`), which uses a master schema table to serialize the data into the main outgoing buffer.
+2.  **Manual "Fast Path":** For high-frequency or performance-critical packets. A specialized function manually constructs a simplified byte structure and writes it directly to the outgoing buffer, bypassing the schema system.
 
-The client's outgoing message construction is a multi-stage process, utilizing **two distinct pathways** optimized for different types of traffic:
+An opcode can be **overloaded**, having both a schema-defined variant and a manually-built variant. **Live traffic is the only source of truth.**
 
-1.  **Game Logic:** High-level functions related to player actions (e.g., movement, skill use) prepare the raw data for a packet.
-2.  **`MsgConn::BuildPacketFromSchema`:** This central utility function takes a schema and raw data, then orchestrates the serialization.
-3.  **`Msg::MsgPack`:** An internal "virtual machine" that `MsgConn::BuildPacketFromSchema` uses to write data into a packet buffer according to the schema's typecodes.
-4.  **Queueing & Sending:** The completed packet is then passed to a queueing mechanism (e.g., `MsgConn::QueuePacket` or `MsgConn::FlushPacketBuffer`) to be sent to the server.
+## The Universal CMSG Discovery Workflow
 
-## Workflow: Tracing Packet Construction
+### Step 1: Baseline Analysis (Hypothesis Generation)
 
-### Phase 1: Identify Packet Emitters via Dual Pathways
+Start by gathering initial data to form a hypothesis.
 
-To understand how CMSG packets are structured and sent, it's crucial to identify their emission points. The client uses two distinct pathways for outgoing packets.
+1.  **Capture Live Traffic:** Use a packet inspector to capture a sample of the packet you want to analyze. Note its opcode and raw hex data. This is your "ground truth."
+2.  **Consult the Schema Dump:** Look up the opcode in your CMSG schema table dump. Decode the schema at the corresponding address.
+3.  **Compare and Form Hypothesis:**
+    *   **If the live packet's structure appears to match the decoded schema:** Your hypothesis is that the packet is **schema-driven**.
+    *   **If the live packet is much simpler or has a different structure:** Your hypothesis is that the packet is **manually built** on a "Fast Path."
 
-#### Pathway 1: The "Buffered" Stream (High-Frequency Data) Discovery
+### Step 2: Pinpoint the Builder Function (Dynamic Analysis)
 
-This pathway handles continuous or aggregated data (e.g., player movement, mount movement). Data is written into a buffer, which is periodically flushed.
+For the vast majority of gameplay-related packets (movement, skills, jumps, interactions), the data is written to a central buffer before being sent. This gives us a single, reliable point for interception.
 
-1.  **Hook the Flush Point:** To capture packets on this pathway, hook `FUN_140fd1e80` (renamed `MsgConn::FlushPacketBuffer`). This function is called whenever the buffered data is ready to be sent.
-2.  **Capture and Parse:** When the hook triggers, the `MsgSendContext` object (passed as a parameter) will contain a buffer (at `0x398` offset) with concatenated packet data. You must manually parse this buffer to extract individual `(Opcode, Payload)` pairs. This requires parsing the opcode (first 2-4 bytes) and then using knowledge of schema definitions to determine the length of each sub-packet.
-3.  **Trigger Action:** Perform continuous actions in-game (e.g., move your character, use abilities that involve persistent effects) to generate these buffered packets.
+1.  **Set a Write Breakpoint:** In a debugger (like Cheat Engine), set a hardware **write breakpoint** on the `MsgSendContext` buffer. This buffer is located at offset `+0x398` from the base address of the `MsgSendContext` object.
+    *(Tip: Find the `MsgSendContext` object's address by breaking on `MsgConn::FlushPacketBuffer` once and reading the `RCX` register.)*
 
-#### Pathway 2: The "Direct Queue" (Discrete Events) Discovery
+2.  **Trigger the Action & Catch the Break:**
+    *   Perform the in-game action that sends the packet.
+    *   The debugger will pause the game at the exact instruction that is writing data to the buffer.
 
-This pathway handles single, discrete events that need to be sent immediately (e.g., heartbeats, skill activation, interactions).
+3.  **Find the Builder in the Call Stack:**
+    *   Examine the debugger's **Call Stack**.
+    *   Walk up the stack from the breakpoint until you find the high-level function that initiated the process. This function is the **true builder**. It will be outside the low-level `Msg` or `MsgConn` serialization namespaces (e.g., its address will not be in the `140FDxxxx` range).
 
-1.  **Hook the Queueing Point:** Hook `FUN_14104d760` (renamed `MsgConn::QueuePacket`). This function is directly called with the opcode and payload for discrete packets.
-2.  **Capture Data:** When the hook triggers, the `opcode` is passed as the third argument, and a pointer to the `pPayload` as the fourth.
-3.  **Trigger Action:** Perform discrete actions in-game (e.g., jump, use a single skill, click to interact with an NPC). The constant `0x0005` heartbeat packet is a prime example of traffic on this pathway.
+### Step 3: Confirm the Pathway (Static Analysis)
 
-### Phase 2: Analyze Calling Functions to Deduce Packet Structure and Purpose
+Navigate to the builder function's address in Ghidra and analyze its code. This will confirm your hypothesis from Step 1.
 
-Once you have captured opcodes and payload data using the hooks from Phase 1, you can deduce their structure and origin.
+*   **If you see calls to `CMSG::BuildAndSendPacket` (or a virtual call that leads to it):** The packet is **schema-driven**. Your analysis of the schema from the master table is correct.
+*   **If you see the function manually writing bytes (e.g., creating a local struct and calling a memory copy function):** The packet is **manually built**. The logic inside this function defines its true structure.
 
-1.  **Identify Builder/Wrapper Functions:**
-    *   For packets captured via Pathway 2, the function that calls `MsgConn::QueuePacket` is the specific CMSG packet builder.
-    *   For packets captured via Pathway 1, you'll need to analyze the buffer, then identify the high-level logic that created those specific sub-packets.
-2.  **Find the Schema (if applicable):** For schema-driven packets, trace backward from the builder function to find the call to `MsgConn::BuildPacketFromSchema`. The schema address is passed as the second argument to this call.
-3.  **Deduce Purpose:** Analyze the code of the builder function and the data it prepares. This, combined with the opcode, will help you deduce the packet's purpose.
+### Step 4: Document the Verified Structure
 
-### Phase 3: Decode the Schema and Document
+Create or update the markdown file for the packet in `docs/packets/cmsg/`.
 
-1.  **Decode the Schema:** Navigate to the schema's data address in Ghidra. Use the typecode definitions from `system-architecture.md` to determine the exact layout of the packet's data.
-2.  **Document the Packet:** Create a new `.md` file in the `packets/cmsg/` directory for the discovered CMSG packet.
-    *   Include its opcode, a summary of its purpose, its schema address (if applicable), and a detailed field table (offset, type, name, description).
-    *   Provide code snippets from the calling function as evidence.
-    *   Add the packet to the `packets/cmsg/README.md` reference table.
+*   **Crucially, state which pathway the packet uses (Schema-Driven or Manually Built).**
+*   Provide the confirmed packet structure, field by field.
+*   Link to the decompiled builder function(s) you discovered as evidence.
+*   If the packet is overloaded, document both the observed variant and the unobserved (schema) variant, clearly marking the status of each.
 
-## Example: Agent Link Packet (`0x0036`)
+## Note on the `Direct Queue` Pathway (`MsgConn::QueuePacket`)
 
-*   **Builder Call Found:** `CMSG::BuildAgentLink` is found to call `MsgConn::BuildPacketFromSchema`.
-*   **Schema & Opcode:** Inside `CMSG::BuildAgentLink`, the schema `DAT_142513080` is passed to `MsgConn::BuildPacketFromSchema`. The opcode `0x36` is passed to `MsgConn::QueuePacket`.
-*   **Pathway:** This packet uses Pathway 2 (Direct Queue).
-*   **Data Analysis:** Further analysis of `CMSG::BuildAgentLink` reveals the data being passed matches the expected structure of an "Agent Link" update.
-*   **Documentation:** This leads to the creation of `packets/cmsg/CMSG_AGENT_LINK_0x0036.md` detailing its structure and purpose.
-
-## Conclusion
-
-By systematically employing dynamic hooks and tracing the code, you can accurately discover and document all client-to-server packets. This hybrid approach efficiently covers both buffered and direct-queued outgoing traffic.
+While most gameplay packets use the buffered stream, some system-level or simple command packets may call `MsgConn::QueuePacket` directly. If the write breakpoint on the buffer yields no results for a specific packet, setting a breakpoint on `MsgConn::QueuePacket` is a valid alternative investigation path.

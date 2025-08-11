@@ -84,9 +84,9 @@ This section provides a detailed analysis of the primary gameplay connection, wh
 1.  **Game Logic Initiates:** High-level game logic prepares raw data for an outgoing packet.
 2.  **Packet Building (`MsgConn::BuildPacketFromSchema`):** The game logic calls [`MsgConn::BuildPacketFromSchema`](raw_decompilations/cmsg/MsgConn_BuildPacketFromSchema.c), the primary utility for constructing outgoing packets.
 3.  **Serialization (`Msg::MsgPack`):** `BuildPacketFromSchema` internally uses [`Msg::MsgPack`](raw_decompilations/cmsg/Msg_MsgPack.c), a schema-driven "virtual machine" to write data into a buffer.
-4.  **Queueing & Sending:** The completed packet is placed into an outgoing queue:
-    *   **Direct Queue (`MsgConn::QueuePacket`):** For discrete events (e.g., heartbeats, agent links), packets are passed to [`MsgConn::QueuePacket`](raw_decompilations/cmsg/MsgConn_QueuePacket.c), which calls the lower-level [`MsgConn::EnqueuePacket`](raw_decompilations/cmsg/MsgConn_EnqueuePacket.c).
-    *   **Buffered Stream (`MsgConn::FlushPacketBuffer`):** For continuous data (e.g., movement), data is written into a buffer and periodically flushed by [`MsgConn::FlushPacketBuffer`](raw_decompilations/cmsg/MsgConn_FlushPacketBuffer.c).
+4.  **Queueing & Sending:** The serialized packet bytes are placed into an outgoing buffer to be sent to the server. There are two primary mechanisms for this:
+    *   **Buffered Stream (Primary Gameplay Pathway):** For the vast majority of gameplay-related actions (including discrete events like jumps and skill use, as well as continuous data like movement), the serialized data is written directly into the main `MsgSendContext` buffer. This buffer is then flushed in batches by a call to [`MsgConn::FlushPacketBuffer`](raw_decompilations/cmsg/MsgConn_FlushPacketBuffer.c). This is the most common and performance-critical pathway.
+    *   **Direct Queue (`MsgConn::QueuePacket`):** This pathway is typically reserved for simpler, out-of-band system commands or legacy packets. It bypasses the main buffer and queues a packet for more immediate sending via [`MsgConn::QueuePacket`](raw_decompilations/cmsg/MsgConn_QueuePacket.c).
 
 ---
 
