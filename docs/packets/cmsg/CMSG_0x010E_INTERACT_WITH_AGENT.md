@@ -27,7 +27,7 @@ The packet is a fixed 4 bytes.
 | Offset | Size | Data Type (Inferred) | Description |
 |---|---|---|---|
 | 0x00 | 2 | `ushort` | The opcode `0x010E`. |
-| 0x02 | 2 | `ushort` | The interaction value. Often `1`, likely representing the index of the selected dialogue option or a generic "continue" command. |
+| 0x02 | 2 | `ushort` | A **Command ID** indicating the type of interaction. Known values: `0x0001` (Continue/Next), `0x0002` (Select Option), `0x0004` (Exit Dialogue). |
 
 **Live Packet Sample (Selecting an option):**
 `16:40:22.740 [S] CMSG_UNKNOWN Op:0x010E | Sz:4 | 0E 01 01 00`
