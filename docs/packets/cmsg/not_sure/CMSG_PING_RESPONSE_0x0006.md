@@ -1,3 +1,9 @@
+**Status: Unverified**
+
+**This packet was documented by analyzing a schema from the client's data files. It has not been confirmed to match live network traffic and may be outdated or used in specific, niche circumstances.**
+
+---
+
 # CMSG_PING_RESPONSE (0x0006)
 
 **Direction:** Client -> Server

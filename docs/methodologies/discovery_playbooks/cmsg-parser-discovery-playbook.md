@@ -1,10 +1,10 @@
-# CMSG Packet Discovery Playbook (Live-Validation Workflow)
+# CMSG Packet Discovery Playbook
 
-**Status:** Confirmed & Validated Workflow
+**Status:** Confirmed & Validated Master Workflow
 
 ## Objective
 
-This document provides the definitive, repeatable method for discovering and validating any Client-to-Server (CMSG) packet structure. This workflow is based on a dynamic-first approach that prioritizes live traffic and call stack analysis to correctly identify the true origin of a packet.
+This document provides the definitive, repeatable method for discovering and validating any Client-to-Server (CMSG) packet structure. This workflow is a complete, end-to-end process, starting with dumping the client's schema metadata and proceeding to live traffic analysis to confirm the findings.
 
 ## Core Principle: Two Serialization Systems
 
@@ -15,49 +15,64 @@ The client uses two distinct pathways for building outgoing packets. The key to 
 
 An opcode can be **overloaded**, having both a schema-defined variant and a manually-built variant. **Live traffic is the only source of truth.**
 
-## The Universal CMSG Discovery Workflow
+---
 
-### Step 1: Baseline Analysis (Hypothesis Generation)
+## Part 1: Prerequisite - Dumping the Master Schema Table
 
-Start by gathering initial data to form a hypothesis.
+Before analyzing individual packets, we must first extract the client's own metadata. This provides a complete worklist of all schema-driven packets.
 
-1.  **Capture Live Traffic:** Use a packet inspector to capture a sample of the packet you want to analyze. Note its opcode and raw hex data. This is your "ground truth."
-2.  **Consult the Schema Dump:** Look up the opcode in your CMSG schema table dump. Decode the schema at the corresponding address.
+### Step 1.1: Find the Schema Table Address (Dynamic Analysis)
+
+The pointer to the schema table is initialized at runtime. Use a memory debugger (like Cheat Engine) on a live, logged-in game client.
+
+1.  **Find `MsgConn` Pointer:** The global pointer to the game connection object is at the static address `DAT_142628290`. In Cheat Engine, find the 8-byte pointer value stored at `"Gw2-64.exe"+2628290`. This is the live address of the `MsgConn` object.
+
+2.  **Find `SchemaTableInfo` Pointer:** The pointer to the structure containing table information is at offset `+0x18` from the `MsgConn` object. Read the 8-byte pointer at `[MsgConn Address + 0x18]`.
+
+3.  **Find Table Base and Size:** From the `SchemaTableInfo` address, read the following:
+    *   **Table Base:** The 8-byte pointer at offset `+0x50`. This is the final address of the CMSG schema table.
+    *   **Table Size:** The 4-byte integer at offset `+0x5c`. This is the number of entries in the table.
+
+### Step 1.2: Dump the Opcode-to-Schema Table
+
+With the live base address and size, use the provided LUA script (`tools/cheat-engine/CE_CMSG_SchemaDumper.lua`) in Cheat Engine to automatically print the complete `Opcode -> Schema Address` mapping. This dump is the foundation for all subsequent schema analysis.
+
+---
+
+## Part 2: The Universal CMSG Discovery Workflow
+
+### Step 2.1: Baseline Analysis (Hypothesis Generation)
+
+Start by gathering initial data to form a hypothesis for a specific packet.
+
+1.  **Capture Live Traffic:** Use a packet inspector to capture a sample of the packet. Note its opcode and raw hex data. This is your "ground truth."
+2.  **Consult the Schema Dump:** Look up the opcode in the schema table dump from Part 1. Decode the schema at the corresponding address using the typecode reference table.
 3.  **Compare and Form Hypothesis:**
     *   **If the live packet's structure appears to match the decoded schema:** Your hypothesis is that the packet is **schema-driven**.
     *   **If the live packet is much simpler or has a different structure:** Your hypothesis is that the packet is **manually built** on a "Fast Path."
 
-### Step 2: Pinpoint the Builder Function (Dynamic Analysis)
+### Step 2.2: Pinpoint the Builder Function (Dynamic Analysis)
 
-For the vast majority of gameplay-related packets (movement, skills, jumps, interactions), the data is written to a central buffer before being sent. This gives us a single, reliable point for interception.
+For the vast majority of gameplay-related packets, the data is written to a central buffer. This gives us a single, reliable point for interception.
 
-1.  **Set a Write Breakpoint:** In a debugger (like Cheat Engine), set a hardware **write breakpoint** on the `MsgSendContext` buffer. This buffer is located at offset `+0x398` from the base address of the `MsgSendContext` object.
-    *(Tip: Find the `MsgSendContext` object's address by breaking on `MsgConn::FlushPacketBuffer` once and reading the `RCX` register.)*
+1.  **Set a Write Breakpoint:** In your debugger, set a hardware **write breakpoint** on the `MsgSendContext` buffer. This buffer is located at offset `+0x398` from the base address of the `MsgSendContext` object.
+    *(Tip: Find the `MsgSendContext` address by breaking on `MsgConn::FlushPacketBuffer` once and reading the `RCX` register.)*
 
-2.  **Trigger the Action & Catch the Break:**
-    *   Perform the in-game action that sends the packet.
-    *   The debugger will pause the game at the exact instruction that is writing data to the buffer.
+2.  **Trigger the Action & Catch the Break:** Perform the in-game action that sends the packet. The debugger will pause.
 
-3.  **Find the Builder in the Call Stack:**
-    *   Examine the debugger's **Call Stack**.
-    *   Walk up the stack from the breakpoint until you find the high-level function that initiated the process. This function is the **true builder**. It will be outside the low-level `Msg` or `MsgConn` serialization namespaces (e.g., its address will not be in the `140FDxxxx` range).
+3.  **Find the Builder in the Call Stack:** Examine the debugger's **Call Stack**. Walk up the stack until you find the high-level function that initiated the process. This is the **true builder**. It will be outside the low-level `Msg` or `MsgConn` serialization namespaces.
 
-### Step 3: Confirm the Pathway (Static Analysis)
+### Step 2.3: Confirm the Pathway (Static Analysis)
 
-Navigate to the builder function's address in Ghidra and analyze its code. This will confirm your hypothesis from Step 1.
+Navigate to the builder function's address in Ghidra and analyze its code. This confirms your hypothesis from Step 2.1.
 
-*   **If you see calls to `CMSG::BuildAndSendPacket` (or a virtual call that leads to it):** The packet is **schema-driven**. Your analysis of the schema from the master table is correct.
-*   **If you see the function manually writing bytes (e.g., creating a local struct and calling a memory copy function):** The packet is **manually built**. The logic inside this function defines its true structure.
+*   **If you see calls to `CMSG::BuildAndSendPacket`:** The packet is **schema-driven**.
+*   **If you see manual byte manipulation and writes:** The packet is **manually built**.
 
-### Step 4: Document the Verified Structure
+### Step 2.4: Document the Verified Structure
 
 Create or update the markdown file for the packet in `docs/packets/cmsg/`.
 
-*   **Crucially, state which pathway the packet uses (Schema-Driven or Manually Built).**
-*   Provide the confirmed packet structure, field by field.
-*   Link to the decompiled builder function(s) you discovered as evidence.
-*   If the packet is overloaded, document both the observed variant and the unobserved (schema) variant, clearly marking the status of each.
-
-## Note on the `Direct Queue` Pathway (`MsgConn::QueuePacket`)
-
-While most gameplay packets use the buffered stream, some system-level or simple command packets may call `MsgConn::QueuePacket` directly. If the write breakpoint on the buffer yields no results for a specific packet, setting a breakpoint on `MsgConn::QueuePacket` is a valid alternative investigation path.
+*   State which pathway the packet uses (Schema-Driven or Manually Built).
+*   Provide the confirmed packet structure and link to the decompiled builder function(s) as evidence.
+*   If an opcode is overloaded, document both variants and clearly mark their status.

@@ -1,3 +1,9 @@
+**Status: Unverified**
+
+**This packet was documented by analyzing a schema from the client's data files. It has not been confirmed to match live network traffic and may be outdated or used in specific, niche circumstances.**
+
+---
+
 # CMSG 0x002B — Unknown (Descriptor-driven payload)
 
 Status: Confirmed opcode. Payload originates from a descriptor; exact field layout not finalized.

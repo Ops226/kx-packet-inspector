@@ -1,3 +1,9 @@
+**Status: Unverified**
+
+**This packet was documented by analyzing a schema from the client's data files. It has not been confirmed to match live network traffic and may be outdated or used in specific, niche circumstances.**
+
+---
+
 # CMSG 0x005B — Unknown (pointer payload from object)
 
 Status: Confirmed opcode. Payload pointer origin identified; size not explicitly set at this site. Name TBD.
