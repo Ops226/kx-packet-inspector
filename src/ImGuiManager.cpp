@@ -244,7 +244,6 @@ void ImGuiManager::RenderFilteringSection() {
 // Helper function to render a single row in the packet log
 void ImGuiManager::RenderSinglePacketLogRow(const kx::PacketInfo& packet, int display_index, int original_log_index) {
     std::string displayLogEntry = kx::Utils::FormatDisplayLogEntryString(packet);
-    // auto parsedDataStr = kx::Parsing::GetParsedDataTooltipString(packet); // Tooltip removed
 
     ImGui::PushID(display_index);
 
@@ -258,9 +257,13 @@ void ImGuiManager::RenderSinglePacketLogRow(const kx::PacketInfo& packet, int di
     ImGui::PushStyleColor(ImGuiCol_Text, textColor);
     // --- End Color Coding ---
 
-    // Use Selectable instead of InputText
+    // Calculate widths for layout to prevent the selectable from consuming the button's space.
+    float button_width = ImGui::CalcTextSize("Copy").x + ImGui::GetStyle().FramePadding.x * 2.0f;
+    float selectable_width = ImGui::GetContentRegionAvail().x - button_width - ImGui::GetStyle().ItemSpacing.x;
+
+    // Use Selectable with an explicit width to leave space for the button
     bool is_selected = (m_selectedPacketLogIndex == original_log_index);
-    if (ImGui::Selectable(displayLogEntry.c_str(), is_selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+    if (ImGui::Selectable(displayLogEntry.c_str(), is_selected, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(selectable_width, 0))) {
         m_selectedPacketLogIndex = original_log_index;
         // Clear buffer to force re-parsing when a new packet is selected
         m_parsedPayloadBuffer.clear();
@@ -268,16 +271,8 @@ void ImGuiManager::RenderSinglePacketLogRow(const kx::PacketInfo& packet, int di
     }
     ImGui::PopStyleColor(); // Pop text color style
 
-    // --- Tooltip for Parsed Data --- (Removed)
-    // if (ImGui::IsItemHovered() && parsedDataStr.has_value()) {
-    //     ImGui::BeginTooltip();
-    //     ImGui::TextUnformatted(parsedDataStr->c_str()); // Display the pre-formatted string
-    //     ImGui::EndTooltip();
-    // }
-    // --- End Tooltip ---
-
-    // Copy button: generate and copy full log entry string on click.
-    ImGui::SameLine(ImGui::GetWindowWidth() - ImGui::CalcTextSize("Copy").x - ImGui::GetStyle().FramePadding.x * 2.0f - ImGui::GetStyle().ScrollbarSize); // Align to right
+    // Place the button on the same line; it will now fit in the space reserved for it.
+    ImGui::SameLine();
     if (ImGui::SmallButton("Copy")) {
         std::string fullLogEntry = kx::Utils::FormatFullLogEntryString(packet);
         ImGui::SetClipboardText(fullLogEntry.c_str());
