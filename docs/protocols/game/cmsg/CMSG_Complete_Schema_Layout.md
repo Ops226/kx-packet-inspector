@@ -45,13 +45,13 @@ _(No schema defined for this opcode.)_
 | 2 | `0x04` | `compressed_int` |
 | 3 | `0x02` | `byte` |
 | 4 | `0x0F` | `Optional Block` |
-    | 0 | `0x09` | `float[4]` |
-    | 1 | `0x04` | `compressed_int` |
-    | 2 | `0x0F` | `Optional Block` |
-        | 0 | `0x09` | `float[4]` |
-    | 3 | `0x0F` | `Optional Block` |
-    | 4 | `0x02` | `byte` |
-    | 5 | `0x02` | `byte` |
+| 4.0 | `0x09` | `float[4]` |
+| 4.1 | `0x04` | `compressed_int` |
+| 4.2 | `0x0F` | `Optional Block` |
+| 4.2.0 | `0x09` | `float[4]` |
+| 4.3 | `0x0F` | `Optional Block` |
+| 4.4 | `0x02` | `byte` |
+| 4.5 | `0x02` | `byte` |
 
 ## CMSG 0x0005
 
@@ -91,13 +91,13 @@ _(No schema defined for this opcode.)_
 | 4 | `0x04` | `compressed_int` |
 | 5 | `0x14` | `Variable Buffer (byte count)` |
 | 6 | `0x0F` | `Optional Block` |
-    | 0 | `0x09` | `float[4]` |
-    | 1 | `0x04` | `compressed_int` |
-    | 2 | `0x0F` | `Optional Block` |
-        | 0 | `0x09` | `float[4]` |
-    | 3 | `0x0F` | `Optional Block` |
-    | 4 | `0x02` | `byte` |
-    | 5 | `0x02` | `byte` |
+| 6.0 | `0x09` | `float[4]` |
+| 6.1 | `0x04` | `compressed_int` |
+| 6.2 | `0x0F` | `Optional Block` |
+| 6.2.0 | `0x09` | `float[4]` |
+| 6.3 | `0x0F` | `Optional Block` |
+| 6.4 | `0x02` | `byte` |
+| 6.5 | `0x02` | `byte` |
 | 7 | `0x03` | `short` |
 | 8 | `0x03` | `short` |
 | 9 | `0x04` | `compressed_int` |
@@ -126,13 +126,13 @@ _(No schema defined for this opcode.)_
 | 4 | `0x04` | `compressed_int` |
 | 5 | `0x14` | `Variable Buffer (byte count)` |
 | 6 | `0x0F` | `Optional Block` |
-    | 0 | `0x09` | `float[4]` |
-    | 1 | `0x04` | `compressed_int` |
-    | 2 | `0x0F` | `Optional Block` |
-        | 0 | `0x09` | `float[4]` |
-    | 3 | `0x0F` | `Optional Block` |
-    | 4 | `0x02` | `byte` |
-    | 5 | `0x02` | `byte` |
+| 6.0 | `0x09` | `float[4]` |
+| 6.1 | `0x04` | `compressed_int` |
+| 6.2 | `0x0F` | `Optional Block` |
+| 6.2.0 | `0x09` | `float[4]` |
+| 6.3 | `0x0F` | `Optional Block` |
+| 6.4 | `0x02` | `byte` |
+| 6.5 | `0x02` | `byte` |
 
 ## CMSG 0x000A
 
@@ -147,13 +147,13 @@ _(No schema defined for this opcode.)_
 | 4 | `0x04` | `compressed_int` |
 | 5 | `0x14` | `Variable Buffer (byte count)` |
 | 6 | `0x0F` | `Optional Block` |
-    | 0 | `0x09` | `float[4]` |
-    | 1 | `0x04` | `compressed_int` |
-    | 2 | `0x0F` | `Optional Block` |
-        | 0 | `0x09` | `float[4]` |
-    | 3 | `0x0F` | `Optional Block` |
-    | 4 | `0x02` | `byte` |
-    | 5 | `0x02` | `byte` |
+| 6.0 | `0x09` | `float[4]` |
+| 6.1 | `0x04` | `compressed_int` |
+| 6.2 | `0x0F` | `Optional Block` |
+| 6.2.0 | `0x09` | `float[4]` |
+| 6.3 | `0x0F` | `Optional Block` |
+| 6.4 | `0x02` | `byte` |
+| 6.5 | `0x02` | `byte` |
 | 7 | `0x08` | `float[3]` |
 | 8 | `0x06` | `float` |
 
@@ -170,20 +170,20 @@ _(No schema defined for this opcode.)_
 | 4 | `0x04` | `compressed_int` |
 | 5 | `0x14` | `Variable Buffer (byte count)` |
 | 6 | `0x0F` | `Optional Block` |
-    | 0 | `0x09` | `float[4]` |
-    | 1 | `0x04` | `compressed_int` |
-    | 2 | `0x0F` | `Optional Block` |
-        | 0 | `0x09` | `float[4]` |
-    | 3 | `0x0F` | `Optional Block` |
-    | 4 | `0x02` | `byte` |
-    | 5 | `0x02` | `byte` |
+| 6.0 | `0x09` | `float[4]` |
+| 6.1 | `0x04` | `compressed_int` |
+| 6.2 | `0x0F` | `Optional Block` |
+| 6.2.0 | `0x09` | `float[4]` |
+| 6.3 | `0x0F` | `Optional Block` |
+| 6.4 | `0x02` | `byte` |
+| 6.5 | `0x02` | `byte` |
 | 7 | `0x08` | `float[3]` |
 | 8 | `0x08` | `float[3]` |
 | 9 | `0x0F` | `Optional Block` |
-    | 0 | `0x04` | `compressed_int` |
-    | 1 | `0x04` | `compressed_int` |
-    | 2 | `0x0F` | `Optional Block` |
-        | 0 | `0x0A` | `special_vec3_and_compressed_int` |
+| 9.0 | `0x04` | `compressed_int` |
+| 9.1 | `0x04` | `compressed_int` |
+| 9.2 | `0x0F` | `Optional Block` |
+| 9.2.0 | `0x0A` | `special_vec3_and_compressed_int` |
 
 ## CMSG 0x000C
 
@@ -504,7 +504,7 @@ _(No schema defined for this opcode.)_
 | 2 | `0x02` | `byte` |
 | 3 | `0x02` | `byte` |
 | 4 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x04` | `compressed_int` |
+| 4.0 | `0x04` | `compressed_int` |
 
 ## CMSG 0x0028
 
@@ -544,12 +544,12 @@ _(No schema defined for this opcode.)_
 | 0 | `0x01` | `short` |
 | 1 | `0x02` | `byte` |
 | 2 | `0x10` | `Fixed Array` |
-    | 0 | `0x03` | `short` |
+| 2.0 | `0x03` | `short` |
 | 3 | `0x10` | `Fixed Array` |
-    | 0 | `0x02` | `byte` |
+| 3.0 | `0x02` | `byte` |
 | 4 | `0x10` | `Fixed Array` |
 | 5 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x04` | `compressed_int` |
+| 5.0 | `0x04` | `compressed_int` |
 | 6 | `0x11` | `Variable Array (byte count)` |
 
 ## CMSG 0x002C
@@ -597,12 +597,12 @@ _(No schema defined for this opcode.)_
 | 2 | `0x02` | `byte` |
 | 3 | `0x02` | `byte` |
 | 4 | `0x10` | `Fixed Array` |
-    | 0 | `0x03` | `short` |
+| 4.0 | `0x03` | `short` |
 | 5 | `0x10` | `Fixed Array` |
-    | 0 | `0x02` | `byte` |
+| 5.0 | `0x02` | `byte` |
 | 6 | `0x10` | `Fixed Array` |
 | 7 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x04` | `compressed_int` |
+| 7.0 | `0x04` | `compressed_int` |
 | 8 | `0x11` | `Variable Array (byte count)` |
 
 ## CMSG 0x0031
@@ -721,7 +721,7 @@ _(No schema defined for this opcode.)_
 | 0 | `0x01` | `short` |
 | 1 | `0x04` | `compressed_int` |
 | 2 | `0x10` | `Fixed Array` |
-    | 0 | `0x02` | `byte` |
+| 2.0 | `0x02` | `byte` |
 
 ## CMSG 0x003D
 
@@ -801,7 +801,7 @@ _(No schema defined for this opcode.)_
 | 2 | `0x04` | `compressed_int` |
 | 3 | `0x04` | `compressed_int` |
 | 4 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x04` | `compressed_int` |
+| 4.0 | `0x04` | `compressed_int` |
 | 5 | `0x11` | `Variable Array (byte count)` |
 
 ## CMSG 0x0046
@@ -865,7 +865,7 @@ _(No schema defined for this opcode.)_
 | :--- | :--- | :--- |
 | 0 | `0x01` | `short` |
 | 1 | `0x10` | `Fixed Array` |
-    | 0 | `0x04` | `compressed_int` |
+| 1.0 | `0x04` | `compressed_int` |
 | 2 | `0x04` | `compressed_int` |
 
 ## CMSG 0x004D
@@ -1076,9 +1076,9 @@ _(No schema defined for this opcode.)_
 | :--- | :--- | :--- |
 | 0 | `0x01` | `short` |
 | 1 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x04` | `compressed_int` |
-    | 1 | `0x04` | `compressed_int` |
-    | 2 | `0x04` | `compressed_int` |
+| 1.0 | `0x04` | `compressed_int` |
+| 1.1 | `0x04` | `compressed_int` |
+| 1.2 | `0x04` | `compressed_int` |
 
 ## CMSG 0x0062
 
@@ -1304,11 +1304,11 @@ _(No schema defined for this opcode.)_
 | 0 | `0x01` | `short` |
 | 1 | `0x02` | `byte` |
 | 2 | `0x10` | `Fixed Array` |
-    | 0 | `0x04` | `compressed_int` |
-    | 1 | `0x04` | `compressed_int` |
-    | 2 | `0x10` | `Fixed Array` |
-        | 0 | `0x04` | `compressed_int` |
-    | 3 | `0x02` | `byte` |
+| 2.0 | `0x04` | `compressed_int` |
+| 2.1 | `0x04` | `compressed_int` |
+| 2.2 | `0x10` | `Fixed Array` |
+| 2.2.0 | `0x04` | `compressed_int` |
+| 2.3 | `0x02` | `byte` |
 
 ## CMSG 0x0079
 
@@ -1582,7 +1582,7 @@ _(No schema defined for this opcode.)_
 | 0 | `0x01` | `short` |
 | 1 | `0x02` | `byte` |
 | 2 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x07` | `float[2]` |
+| 2.0 | `0x07` | `float[2]` |
 | 3 | `0x04` | `compressed_int` |
 
 ## CMSG 0x0096
@@ -1826,7 +1826,7 @@ _(No schema defined for this opcode.)_
 | 0 | `0x01` | `short` |
 | 1 | `0x04` | `compressed_int` |
 | 2 | `0x10` | `Fixed Array` |
-    | 0 | `0x04` | `compressed_int` |
+| 2.0 | `0x04` | `compressed_int` |
 
 ## CMSG 0x00B2
 
@@ -2436,7 +2436,7 @@ _(No schema defined for this opcode.)_
 | :--- | :--- | :--- |
 | 0 | `0x01` | `short` |
 | 1 | `0x12` | `Variable Array (short count)` |
-    | 0 | `0x04` | `compressed_int` |
+| 1.0 | `0x04` | `compressed_int` |
 | 2 | `0x12` | `Variable Array (short count)` |
 
 ## CMSG 0x00F5
@@ -2785,7 +2785,7 @@ _(No schema defined for this opcode.)_
 | 0 | `0x01` | `short` |
 | 1 | `0x04` | `compressed_int` |
 | 2 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x04` | `compressed_int` |
+| 2.0 | `0x04` | `compressed_int` |
 | 3 | `0x0B` | `float[4]` |
 | 4 | `0x02` | `byte` |
 
@@ -3121,7 +3121,7 @@ _(No schema defined for this opcode.)_
 | 2 | `0x0D` | `string` |
 | 3 | `0x0D` | `string` |
 | 4 | `0x10` | `Fixed Array` |
-    | 0 | `0x0D` | `string` |
+| 4.0 | `0x0D` | `string` |
 
 ## CMSG 0x0131
 
@@ -3201,7 +3201,7 @@ _(No schema defined for this opcode.)_
 | 2 | `0x03` | `short` |
 | 3 | `0x03` | `short` |
 | 4 | `0x10` | `Fixed Array` |
-    | 0 | `0x03` | `short` |
+| 4.0 | `0x03` | `short` |
 | 5 | `0x02` | `byte` |
 
 ## CMSG 0x0139
@@ -3335,7 +3335,7 @@ _(No schema defined for this opcode.)_
 | 2 | `0x04` | `compressed_int` |
 | 3 | `0x02` | `byte` |
 | 4 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x03` | `short` |
+| 4.0 | `0x03` | `short` |
 
 ## CMSG 0x0145
 
@@ -3452,15 +3452,15 @@ _(No schema defined for this opcode.)_
 | 0 | `0x01` | `short` |
 | 1 | `0x04` | `compressed_int` |
 | 2 | `0x12` | `Variable Array (short count)` |
-    | 0 | `0x03` | `short` |
-    | 1 | `0x03` | `short` |
-    | 2 | `0x08` | `float[3]` |
-    | 3 | `0x08` | `float[3]` |
-    | 4 | `0x06` | `float` |
-    | 5 | `0x0F` | `Optional Block` |
-        | 0 | `0x0E` | `string_utf8` |
-        | 1 | `0x02` | `byte` |
-        | 2 | `0x02` | `byte` |
+| 2.0 | `0x03` | `short` |
+| 2.1 | `0x03` | `short` |
+| 2.2 | `0x08` | `float[3]` |
+| 2.3 | `0x08` | `float[3]` |
+| 2.4 | `0x06` | `float` |
+| 2.5 | `0x0F` | `Optional Block` |
+| 2.5.0 | `0x0E` | `string_utf8` |
+| 2.5.1 | `0x02` | `byte` |
+| 2.5.2 | `0x02` | `byte` |
 
 ## CMSG 0x0151
 
@@ -3654,7 +3654,7 @@ _(No schema defined for this opcode.)_
 | :--- | :--- | :--- |
 | 0 | `0x01` | `short` |
 | 1 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x04` | `compressed_int` |
+| 1.0 | `0x04` | `compressed_int` |
 | 2 | `0x02` | `byte` |
 
 ## CMSG 0x0166
@@ -3939,8 +3939,8 @@ _(No schema defined for this opcode.)_
 | 1 | `0x04` | `compressed_int` |
 | 2 | `0x04` | `compressed_int` |
 | 3 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x03` | `short` |
-    | 1 | `0x04` | `compressed_int` |
+| 3.0 | `0x03` | `short` |
+| 3.1 | `0x04` | `compressed_int` |
 
 ## CMSG 0x0187
 
@@ -3951,8 +3951,8 @@ _(No schema defined for this opcode.)_
 | 0 | `0x01` | `short` |
 | 1 | `0x04` | `compressed_int` |
 | 2 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x04` | `compressed_int` |
-    | 1 | `0x02` | `byte` |
+| 2.0 | `0x04` | `compressed_int` |
+| 2.1 | `0x02` | `byte` |
 
 ## CMSG 0x0188
 
@@ -4049,13 +4049,13 @@ _(No schema defined for this opcode.)_
 | 0 | `0x01` | `short` |
 | 1 | `0x0D` | `string` |
 | 2 | `0x10` | `Fixed Array` |
-    | 0 | `0x02` | `byte` |
+| 2.0 | `0x02` | `byte` |
 | 3 | `0x02` | `byte` |
 | 4 | `0x02` | `byte` |
 | 5 | `0x04` | `compressed_int` |
 | 6 | `0x11` | `Variable Array (byte count)` |
 | 7 | `0x10` | `Fixed Array` |
-    | 0 | `0x04` | `compressed_int` |
+| 7.0 | `0x04` | `compressed_int` |
 
 ## CMSG 0x0194
 
@@ -4067,13 +4067,13 @@ _(No schema defined for this opcode.)_
 | 1 | `0x02` | `byte` |
 | 2 | `0x0D` | `string` |
 | 3 | `0x10` | `Fixed Array` |
-    | 0 | `0x02` | `byte` |
+| 3.0 | `0x02` | `byte` |
 | 4 | `0x02` | `byte` |
 | 5 | `0x02` | `byte` |
 | 6 | `0x04` | `compressed_int` |
 | 7 | `0x11` | `Variable Array (byte count)` |
 | 8 | `0x10` | `Fixed Array` |
-    | 0 | `0x04` | `compressed_int` |
+| 8.0 | `0x04` | `compressed_int` |
 
 ## CMSG 0x0195
 
@@ -4118,7 +4118,7 @@ _(No schema defined for this opcode.)_
 | 0 | `0x01` | `short` |
 | 1 | `0x0D` | `string` |
 | 2 | `0x10` | `Fixed Array` |
-    | 0 | `0x02` | `byte` |
+| 2.0 | `0x02` | `byte` |
 | 3 | `0x11` | `Variable Array (byte count)` |
 
 ## CMSG 0x019A
@@ -4525,8 +4525,8 @@ _(No schema defined for this opcode.)_
 | :--- | :--- | :--- |
 | 0 | `0x01` | `short` |
 | 1 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x04` | `compressed_int` |
-    | 1 | `0x02` | `byte` |
+| 1.0 | `0x04` | `compressed_int` |
+| 1.1 | `0x02` | `byte` |
 | 2 | `0x04` | `compressed_int` |
 
 ## CMSG 0x01C8
@@ -4795,7 +4795,7 @@ _(No schema defined for this opcode.)_
 | 1 | `0x0B` | `float[4]` |
 | 2 | `0x04` | `compressed_int` |
 | 3 | `0x11` | `Variable Array (byte count)` |
-    | 0 | `0x04` | `compressed_int` |
+| 3.0 | `0x04` | `compressed_int` |
 | 4 | `0x02` | `byte` |
 | 5 | `0x0D` | `string` |
 | 6 | `0x0D` | `string` |

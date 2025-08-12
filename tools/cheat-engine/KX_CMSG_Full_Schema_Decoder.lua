@@ -1,4 +1,4 @@
---[[ 
+--[[
   KX CMSG Full Schema Decoder
   Part of the kx-packet-inspector project.
 
@@ -24,11 +24,11 @@ local SCHEMA_OFFSET_IN_ENTRY = 8
 local SCHEMA_FIELD_DEF_SIZE = 40
 local MAX_RECURSION_DEPTH = 10
 
--- This map translates the raw typecode from the schema definition to a human-readable string.
+-- This map translates the raw typecode from the schema definition to a human readable string.
 local TYPECODE_MAP = {
     [0x01] = "short",
     [0x02] = "byte",
-    [0x03] = "short", -- Fall-through to case 1 in assembly
+    [0x03] = "short", -- Fall through to case 1 in assembly
     [0x04] = "compressed_int",
     [0x05] = "long long",
     [0x06] = "float", -- or int
@@ -47,7 +47,7 @@ local TYPECODE_MAP = {
     [0x13] = "Fixed Buffer",
     [0x14] = "Variable Buffer (byte count)",
     [0x15] = "Variable Buffer (short count)",
-    [0x16] = "MP_SRV_ALIGN", -- Server-only, error on client
+    [0x16] = "MP_SRV_ALIGN", -- Server only, error on client
     [0x17] = "float", -- or int
     [0x18] = "terminator", -- Marks the end of a schema
     [0x19] = "float", -- or int
@@ -55,11 +55,11 @@ local TYPECODE_MAP = {
 }
 
 -- --- Helper Functions ---
-function isAddressValid(addr)
+local function isAddressValid(addr)
   return readBytes(addr, 1, false) ~= nil
 end
 
-function getPointer(base, offset)
+local function getPointer(base, offset)
   if not base or base == 0 then return nil end
   local addr = base + (offset or 0)
   if not isAddressValid(addr) then return nil end
@@ -67,14 +67,16 @@ function getPointer(base, offset)
 end
 
 -- --- Recursive Parser ---
-function parse_schema(file, schema_address, indent_level, parsed_schemas)
+local function parse_schema(file, schema_address, field_prefix, parsed_schemas, depth)
     if not schema_address or schema_address == 0 then return end
-    if parsed_schemas[schema_address] or indent_level > MAX_RECURSION_DEPTH then
-        return
-    end
+
+    depth = depth or 0
+    if depth > MAX_RECURSION_DEPTH then return end
+
+    -- Prevent cycles when schemas reference each other
+    if parsed_schemas[schema_address] then return end
     parsed_schemas[schema_address] = true
 
-    local indent = string.rep("    ", indent_level)
     local field_index = 0
 
     while true do
@@ -82,20 +84,28 @@ function parse_schema(file, schema_address, indent_level, parsed_schemas)
         if not isAddressValid(field_def_addr) then break end
 
         local typecode = readInteger(field_def_addr)
-
-        if typecode == 0 or typecode == 0x18 then -- Terminator
+        if not typecode or typecode == 0 or typecode == 0x18 then
+            -- 0 or 0x18 means terminator
             break
         end
 
         local type_info = TYPECODE_MAP[typecode] or "unknown"
 
-        file:write(string.format("%s| %d | `0x%02X` | `%s` |\n", indent, field_index, typecode, type_info))
+        local current_field_id
+        if field_prefix ~= "" then
+            current_field_id = field_prefix .. tostring(field_index)
+        else
+            current_field_id = tostring(field_index)
+        end
 
-        -- For complex types, parse the sub-schema
+        file:write(string.format("| %s | `0x%02X` | `%s` |\n", current_field_id, typecode, type_info))
+
+        -- Complex types that carry a sub schema pointer at +24
         if typecode == 0x0F or typecode == 0x10 or typecode == 0x11 or typecode == 0x12 then
             local sub_schema_ptr = getPointer(field_def_addr, 24)
             if sub_schema_ptr and sub_schema_ptr ~= 0 then
-                parse_schema(file, sub_schema_ptr, indent_level + 1, parsed_schemas)
+                local sub_prefix = current_field_id .. "."
+                parse_schema(file, sub_schema_ptr, sub_prefix, parsed_schemas, depth + 1)
             end
         end
 
@@ -104,12 +114,12 @@ function parse_schema(file, schema_address, indent_level, parsed_schemas)
 end
 
 -- --- Main Script Logic ---
-function main()
+local function main()
     print("--- KX CMSG Full Schema Decoder ---")
 
-    -- Prompt the user for a universal output path using a documented, reliable function.
+    -- Prompt the user for a universal output path
     local default_path_suggestion = [[C:\CMSG_Protocol_Layout.md]]
-    local output_path = inputQuery('Save CMSG Protocol Dump', 'Enter the full path for the output file:', default_path_suggestion)
+    local output_path = inputQuery("Save CMSG Protocol Dump", "Enter the full path for the output file:", default_path_suggestion)
 
     if not output_path or #output_path == 0 then
         print("No output path provided. Aborting script.")
@@ -119,7 +129,7 @@ function main()
 
     local file, err = io.open(output_path, "w")
     if not file then
-        print("ERROR: Could not open file for writing: " .. err)
+        print("ERROR: Could not open file for writing: " .. tostring(err))
         return
     end
 
@@ -151,7 +161,7 @@ function main()
     local table_base = getPointer(schema_info_addr, TABLE_BASE_OFFSET)
     local table_size = readInteger(schema_info_addr + TABLE_SIZE_OFFSET)
 
-    if not table_base or table_size == 0 then
+    if not table_base or not table_size or table_size == 0 then
         print("ERROR: Could not read Table Base or Size from SchemaTableInfo.")
         file:close()
         return
@@ -174,8 +184,8 @@ function main()
             file:write("| Field # | Typecode | Type Name |\n")
             file:write("| :--- | :--- | :--- |\n")
 
-            local parsed_schemas = {} -- Reset for each top-level schema
-            parse_schema(file, schema_addr, 0, parsed_schemas)
+            local parsed_schemas = {}
+            parse_schema(file, schema_addr, "", parsed_schemas, 0)
         else
             file:write("_(No schema defined for this opcode.)_\n")
         end
