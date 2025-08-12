@@ -180,7 +180,8 @@ local function main()
 
         file:write(string.format("## CMSG 0x%04X\n\n", i))
         if schema_addr and schema_addr ~= 0 then
-            file:write(string.format("**Schema Address:** `0x%X`\n\n", schema_addr))
+            local relative_addr = schema_addr - module_base
+            file:write('**Schema Address:** `"' .. GAME_MODULE .. '"+0x' .. string.format("%X`\n\n", relative_addr))
             file:write("| Field # | Typecode | Type Name |\n")
             file:write("| :--- | :--- | :--- |\n")
 
