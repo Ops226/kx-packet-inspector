@@ -1,5 +1,10 @@
 # CMSG Packet Reference (Game Server)
 
+> **For a complete, automatically generated layout of all CMSG packet schemas, see the master reference document:**
+> *   **[CMSG Complete Schema Layout](./CMSG_Complete_Schema_Layout.md)**
+
+---
+
 This directory contains documentation for Client-to-Server packets that have been **fully validated against live network traffic**. Each packet's structure and builder function have been confirmed through dynamic analysis.
 
 For packets that have a known schema or builder but have not been observed or confirmed in common gameplay, see the [Unverified Packets](./unverified/README.md) directory.

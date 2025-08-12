@@ -27,21 +27,25 @@ The packet is created via a deep and complex call chain, confirming it as a core
 
 ## Packet Structure (Decoded from Schema)
 
-The full packet structure contains 6 primary fields. The final field is an **Optional Block** which, when present, contains another 5 fields. This optional block is what causes the size difference between the first and second packets in a skill-use sequence.
+The full packet structure contains 7 primary fields. The final field is an **Optional Block** which, when present, contains another 5 fields. This optional block is what causes the size difference between the first and second packets in a skill-use sequence.
 
 | Field # | Typecode | Data Type (Inferred) | Description |
 | :--- | :--- | :--- | :--- |
 | 1 | `0x01` | `short` | A subtype or sequence ID. Observed as `0x009B`. |
-| 2 | `0x04` | Compressed `int` | A timestamp or server tick. |
-| 3 | `0x02` | `byte` | A flag or state byte. |
-| 4 | `0x04` | Compressed `int` | An ID, possibly the target agent ID. |
-| 5 | `0x14` | Small Buffer | A buffer with a 1-byte length prefix. |
-| 6 | `0x0F` | **Optional Block** | If present, contains the detailed skill context. |
-| 6a | `0x01` | `short` | (Optional) Subtype for the skill context. |
-| 6b | `0x04` | Compressed `int` | (Optional) Timestamp for the skill context. |
-| 6c | `0x02` | `byte` | (Optional) Flag. |
-| 6d | `0x04` | Compressed `int` | (Optional) Target Agent ID for the context. |
-| 6e | `0x14` | Small Buffer | (Optional) Additional data buffer for the context. |
+| 2 | `0x03` | `short` | A secondary subtype or sequence ID. |
+| 3 | `0x04` | Compressed `int` | A timestamp or server tick. |
+| 4 | `0x02` | `byte` | A flag or state byte. |
+| 5 | `0x04` | Compressed `int` | An ID, possibly the target agent ID. |
+| 6 | `0x14` | Small Buffer | A buffer with a 1-byte length prefix. |
+| 7 | `0x0F` | **Optional Block** | If present, contains the detailed skill context. |
+| 7a | `0x01` | `short` | (Optional) Subtype for the skill context. |
+| 7b | `0x04` | Compressed `int` | (Optional) Timestamp for the skill context. |
+| 7c | `0x02` | `byte` | (Optional) Flag. |
+| 7d | `0x04` | Compressed `int` | (Optional) Target Agent ID for the context. |
+| 7e | `0x14` | Small Buffer | (Optional) Additional data buffer for the context. |
+
+### Schema Analysis Notes
+The structure above is confirmed by a direct decoding of the schema definition at `0x7FF6E0EA5FB0`. Analysis of the `Msg::MsgPack` assembly (`0x00fd2d5f`) shows that typecode `0x03` is handled by the same code path as `0x01`, confirming it as a `short`.
 
 ## Live Packet Samples
 
