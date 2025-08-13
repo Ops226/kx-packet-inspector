@@ -66,7 +66,7 @@ Now, switch to your static analysis tool (Ghidra).
 1.  **Locate the Handler Function:** Convert the live handler address from your discovery map into a static address in Ghidra.
 2.  **Identify the Schema Address:** The handler function (which received the parsed data tuple) will typically perform its logic by reading fields from this tuple. To discover the schema that created this tuple, you must trace backward from the `Msg::DispatchStream` breakpoint. The schema address is passed as an argument to the schema parser (`"Gw2-64.exe"+FD43C0`) just before the handler is dynamically called.
     *   **Setting a Conditional Breakpoint:** To capture this schema address for a specific opcode (e.g., `0x0016`), set a breakpoint on the `call MsgUnpack::ParseWithSchema` instruction (`"Gw2-64.exe"+FD1A47`). Use the following condition:
-    
+
     ```lua
     -- Break if messageId is 0x16
     local ptr = readPointer(RBX + 0x48)
@@ -75,7 +75,6 @@ Now, switch to your static analysis tool (Ghidra).
         return 1
       end
     end
-    return 0
     ```
 
     *   When the breakpoint hits, the `RCX` register will contain the address of the schema definition for that packet.
