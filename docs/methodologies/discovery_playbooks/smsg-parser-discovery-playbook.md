@@ -129,6 +129,32 @@ With this corrected map, your tooling can now be updated to accurately decode SM
 *   **Static Analysis:** We navigate to `Marker::Cli::ProcessAgentMarkerUpdate` in Ghidra. We analyze its code to see how it uses the fields from the data tuple passed to it. We then trace back to the schema parser call to find the schema that defines this structure.
 *   **Conclusion:** This dynamic approach allows us to correctly associate the packet data with its specific handler, `Marker::Cli::ProcessAgentMarkerUpdate`, bypassing incorrect assumptions about a single static dispatcher.
 
-## Conclusion
+## Architectural Note: Why SMSG Cannot Be Mass-Dumped Like CMSG
 
-This dynamic-first workflow is the only reliable method for reverse engineering the game's incoming network protocol. Static analysis is a powerful tool, but it must be guided by live, in-game observation and the correct typecode map to ensure accuracy and account for dynamic dispatch.
+Unlike the Client-to-Server (CMSG) protocol, which utilizes a single, contiguous master table of schema pointers, the Server-to-Client (SMSG) system is architecturally different. SMSG schemas are not located in a linear block of memory. Instead, each opcode's schema pointer is stored within a decentralized "Handler Info" structure that is resolved dynamically at runtime.
+
+This means a simple memory region scan, as performed for CMSG, is not possible for SMSG packets. Discovery **must** be done dynamically by observing live game traffic to map opcodes to their respective schema addresses. However, this process can be fully automated, as described in the "Automating Mass Discovery" section below.
+
+## Next Steps: Automating Mass Discovery
+
+While the manual workflow described above is reliable for analyzing individual packets, the ultimate goal is to mass-discover and dump all SMSG schemas automatically. Based on the decentralized architecture, a two-stage "harvest and process" approach is the most effective solution.
+
+### Stage 1: The "Harvester" Tool (Dynamic Discovery)
+
+The next evolution of the KX Packet Inspector should include a tool designed to automatically harvest opcode-to-schema mappings during live gameplay.
+
+1.  **Target Function:** The tool would hook the schema virtual machine function, **`MsgUnpack::ParseWithSchema`**.
+2.  **Hook Logic:** The detour function for this hook would perform the following actions on every call:
+    *   **Extract Opcode:** Read the `messageId` of the packet currently being processed.
+    *   **Extract Schema Address:** Read the pointer to the schema definition (passed as the first argument, typically in the `RCX` register).
+    *   **Log the Mapping:** Write every unique `[Opcode -> Schema Address]` pair it observes to a log file (e.g., `smsg_schema_map.txt`).
+
+### Stage 2: The "Processor" Script (Static Dumping)
+
+Once the harvester has generated a map, a second script can be used to process it.
+
+1.  **Input:** The script would read the `smsg_schema_map.txt` file.
+2.  **Logic:** It would iterate through each line, take the schema address, and run it through the same decoding logic used by the `KX_SMSG_Schema_Decoder.lua` script.
+3.  **Output:** The script would append the formatted output for every discovered schema into a single, comprehensive Markdown document, creating a definitive master reference for the entire SMSG protocol.
+
+This automated two-stage process represents the definitive path to achieving a complete dump of the SMSG protocol, overcoming the architectural limitations that prevent a simple linear scan.
