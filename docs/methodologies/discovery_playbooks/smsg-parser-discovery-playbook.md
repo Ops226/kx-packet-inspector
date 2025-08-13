@@ -8,7 +8,7 @@ This document provides a concise, repeatable method for discovering Server-to-Cl
 
 ## Scope and Constraints
 
-*   **Primary Environment:** A live game client with a debugger (e.g., Cheat Engine) attached.
+*   **Primary Environment:** A live game client with a debugger (e.g., Cheat Engine) attached, or a custom hooking tool.
 *   **Secondary Environment:** Ghidra CodeBrowser on `Gw2-64.exe` for static analysis of dynamically discovered functions.
 *   **Methodology:** Dynamic analysis to find the correct post-parse handler, followed by static analysis to decode the schema and handler logic.
 *   **Evidence:** All findings must be backed by live memory addresses and supported by decompiled code from the identified handler.
@@ -18,7 +18,7 @@ This document provides a concise, repeatable method for discovering Server-to-Cl
 The client's incoming message handling is a multi-stage, dynamic process.
 
 1.  **`Msg::DispatchStream`:** The primary entry point that receives the raw message stream.
-2.  **`MsgUnpack::ParseWithSchema`:** A schema "virtual machine" called by the dispatcher to parse raw bytes into a structured data tuple.
+2.  **`MsgUnpack::ParseWithSchema`:** A schema "virtual machine" called by the dispatcher to parse raw bytes into a structured data tuple. This function is crucial as it builds a temporary, C++-like struct in memory (the "parsed data tuple") from the raw packet bytes. Handlers then receive a pointer to this parsed tuple, not the raw network buffer.
 3.  **Dynamic Post-Parse Handlers:** Crucially, there is **no single master handler**. After parsing, `Msg::DispatchStream` calls a function pointer that is resolved at runtime. This means different handlers can be active depending on the game's state. `Portal::DispatchMessage` is just one of these many possible handlers.
 
 ## Key Code Signatures for Dynamic Analysis
@@ -29,48 +29,61 @@ To reliably find the correct locations for dynamic analysis after a game update,
 
 This is the most important location for SMSG analysis. It is the instruction that calls the dynamically resolved post-parse handler. Placing a breakpoint here allows capturing the handler address from the `RAX` register.
 
-* **Last Known Address:** `"Gw2-64.exe"+FD1ACD`
-* **Byte Signature (Pattern):** `48 8B 41 18 41 8B 0C 24 48 8B 55 E8 FF D0`
-* **Assembly Context:**
+*   **Last Known Address:** `"Gw2-64.exe"+FD1ACD`
+*   **Byte Signature (Pattern):** `48 8B 41 18 41 8B 0C 24 48 8B 55 E8 FF D0`
+*   **Assembly Context:**
 
-  ```assembly
-  mov rax,[rcx+18]      ; Load handler function pointer into RAX
-  mov ecx,[r12]         ; Load first argument for handler
-  mov rdx,[rbp-18]      ; Load second argument (pointer to parsed data)
-  call rax              ; Execute the handler
-  ```
+    ```assembly
+    mov rax,[rcx+18]      ; Load handler function pointer into RAX
+    mov ecx,[r12]         ; Load first argument for handler
+    mov rdx,[rbp-18]      ; Load second argument (pointer to parsed data)
+    call rax              ; Execute the handler
+    ```
 
 ### SMSG Schema Parser Call
 
 This is the instruction that calls the schema VM to parse the raw packet data. Placing a breakpoint here allows capturing the schema address.
 
-* **Last Known Address:** `"Gw2-64.exe"+FD1A47`
-* **Assembly Context:** `call MsgUnpack::ParseWithSchema`
+*   **Last Known Address:** `"Gw2-64.exe"+FD1A47`
+*   **Assembly Context:** `call MsgUnpack::ParseWithSchema`
 
 ## Workflow: Dynamic Analysis First
 
-### Phase 1: Identify the True Post-Parse Handler
+### Phase 1: Identify the True Post-Parse Handler (Automated)
 
-The only reliable way to find the correct handler for an SMSG packet is to observe the dispatch in a live game client.
+The most efficient way to find the correct handler for an SMSG packet is to use a custom hooking tool.
 
-1.  **Log into the game world.** This ensures the full game connection is active.
-2.  **Set a Breakpoint:** In your debugger (e.g., Cheat Engine), set a breakpoint on the `CALL` instruction inside `Msg::DispatchStream` that executes the dynamic post-parse handler. As of this writing, the address is:
-    `"Gw2-64.exe"+FD1ACD` (`call rax`)
-    This is the point immediately after `MsgUnpack::ParseWithSchema` returns, where `RAX` holds the pointer to the dynamically chosen handler.
-3.  **Trigger the Packet:** Perform an in-game action to generate the specific network traffic you want to inspect (e.g., move your character for `SMSG_PLAYER_STATE_UPDATE`).
-4.  **Capture the Handler Address:** When the breakpoint hits, the `RAX` register will contain the live memory address of the true post-parse handler for that specific message. The `RDX` register will contain a pointer to the parsed data tuple. **Record both addresses.**
-5.  **Examine the Parsed Data:** Using the `RDX` pointer, inspect the first few bytes of the parsed data tuple. This often provides a "type" or "ID" that helps uniquely identify the message (e.g., `FE 03` for the `Marker::Cli::ProcessAgentMarkerUpdate`).
+1.  **Use `MessageHandlerHook.cpp`:** Your existing C++ hook (`src/MessageHandlerHook.h`) is designed for this. Compile and inject it into the game.
+2.  **Capture Output:** Use a debug monitor (like DebugView from Sysinternals) to capture the `OutputDebugStringA` messages. These messages will contain lines like:
+    `[Packet Discovery] Opcode: 0x0016 -> Handler: Gw2-64.exe+01350E60`
+3.  **Trigger Packets:** Play the game and perform various actions to trigger as many different SMSG packets as possible. The hook will automatically log the `Opcode -> Handler` pairs.
+4.  **Aggregate Results:** Collect all unique `Opcode -> Handler` mappings from the debug output. This is your primary SMSG discovery map.
 
 ### Phase 2: Analyze the Handler and Find the Schema
 
 Now, switch to your static analysis tool (Ghidra).
 
-1.  **Locate the Handler Function:** Convert the live handler address from your debugger into a static address in Ghidra (e.g., `140000000 + offset`). Go to this function.
-2.  **Identify the Schema:** The handler function (which received the parsed data tuple) will typically perform its logic by reading fields from this tuple. To discover the schema that created this tuple, you must trace backward from the `Msg::DispatchStream` breakpoint. The schema address is passed as an argument to the schema parser (`"Gw2-64.exe"+FD43C0`) just before the handler is dynamically called.
+1.  **Locate the Handler Function:** Convert the live handler address from your discovery map into a static address in Ghidra.
+2.  **Identify the Schema Address:** The handler function (which received the parsed data tuple) will typically perform its logic by reading fields from this tuple. To discover the schema that created this tuple, you must trace backward from the `Msg::DispatchStream` breakpoint. The schema address is passed as an argument to the schema parser (`"Gw2-64.exe"+FD43C0`) just before the handler is dynamically called.
+    *   **Setting a Conditional Breakpoint:** To capture this schema address for a specific opcode (e.g., `0x0016`), set a breakpoint on the `call MsgUnpack::ParseWithSchema` instruction (`"Gw2-64.exe"+FD1A47`). Use the following condition:
+    
+    ```lua
+    -- Break if messageId is 0x16
+    local ptr = readPointer(RBX + 0x48)
+    if ptr and ptr ~= 0 then
+      if readSmallInteger(ptr) == 0x16 then
+        return 1
+      end
+    end
+    return 0
+    ```
+
+    *   When the breakpoint hits, the `RCX` register will contain the address of the schema definition for that packet.
 
 ### Phase 3: Decode the Schema and Understand Handler Logic
 
-1.  **Decode the Schema:** Navigate to the schema's data address in Ghidra. Use the typecode definitions from `../../system-architecture.md` to determine the exact layout of the packet's parsed data.
+1.  **Decode the Schema:** Once you have the schema address (from `RCX` in Phase 2), you can use your `KX_CMSG_Full_Schema_Decoder.lua` script to decode its structure. Paste the schema address into the script's input prompt.
+    *   **Important Note on SMSG Schemas:** The `TYPECODE_MAP` in `KX_CMSG_Full_Schema_Decoder.lua` was primarily derived from CMSG's `Msg::MsgPack` function. It has been observed that `MsgUnpack::ParseWithSchema` (for SMSG) may interpret some typecodes differently (e.g., `0x08` might be an 8-byte `qword` instead of a 12-byte `float[3]`). A full analysis of `MsgUnpack::ParseWithSchema`'s internal `switch` logic is required to build a definitive, SMSG-specific `TYPECODE_MAP` for 100% accurate decoding.
 2.  **Analyze Handler Logic:** With the schema structure known, analyze the decompiled code of the handler function you discovered. This will reveal the semantic meaning of the packet's fields by observing how the handler uses the parsed data.
 
     **Note on Fast Path Handlers:** For high-frequency packets that use the "Fast Path" (like `SMSG_AGENT_UPDATE_BATCH`), the dynamically discovered handler (e.g., `Event::PreHandler_Stub_0x88`) is a *notification stub* that is called *after* the packet has already been parsed by hardcoded logic inside `Msg::DispatchStream`. Do not look for parsing logic in these stubs; it resides in the dispatcher itself.
