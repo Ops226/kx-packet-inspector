@@ -1,29 +1,30 @@
 # SMSG_TIME_SYNC (0x003F)
 
 **Direction:** Server -> Client
-**Status:** Confirmed (Fast Path Packet)
+**Status:** Confirmed (Generic Path with Multiple Dynamic Handlers)
 
 ## Summary
 
-`SMSG_TIME_SYNC` is a high-frequency "Fast Path" packet responsible for synchronizing the client's internal timers with the server's master clock. Analysis has confirmed that this packet **does not use the generic handler system**. Instead, its logic is hardcoded directly into the main message dispatcher (`Msg::DispatchStream`) for maximum performance.
+`SMSG_TIME_SYNC` is a high-frequency packet responsible for synchronizing the client's internal timers with the server's master clock. It is a critical component for ensuring consistent game state and event timing.
 
-Two distinct variants of this 10-byte packet have been observed: a "Cadence/Tick" variant sent periodically during normal gameplay, and a "Seed/Epoch" variant sent in bursts during state transitions like map loading.
+Live analysis has confirmed that this packet is handled by the **generic dispatch system**. Crucially, the game dynamically switches between at least **two different handler functions** for this single opcode, strongly suggesting each handler is responsible for a different variant of the packet. This aligns with the two observed payload structures: a "Cadence/Tick" variant for continuous updates and a "Seed/Epoch" variant for state initialization.
 
-## Architectural Role & Dispatch Flow (Fast Path)
+## Dynamic Handlers & Dispatch
 
-This packet serves as a prime example of a Fast Path optimization. Unlike most other packets, it bypasses the standard discovery workflow entirely:
+Unlike a "Fast Path" packet, `SMSG_TIME_SYNC` is processed through the standard pipeline that ends in a `call rax` dynamic dispatch. The specific handler loaded into the `RAX` register changes depending on the game's context (e.g., normal gameplay vs. map loading).
 
-1.  **Bypass of Generic Parsing:** When `Msg::DispatchStream` identifies opcode `0x003F`, it recognizes it as a Fast Path packet (likely via an internal "Dispatch Type" flag). It **skips the call** to the generic schema parser (`MsgUnpack::ParseWithSchema`).
-2.  **Hardcoded Handler Logic:** The function then jumps to a dedicated block of code *within* `Msg::DispatchStream` itself. This internal block contains the hardcoded logic to read the 10-byte payload and update the relevant client-side timing variables.
-3.  **Bypass of Dynamic Dispatch:** Crucially, the code then **jumps over the `call rax` instruction** that is used to call external handler functions for generic packets.
+**Discovered Handlers:**
 
-This is why no handler function could be found for this opcode—one does not exist.
+| Handler Address (RVA) | Likely Purpose (Hypothesized) |
+| :-------------------- | :------------------------------ |
+| `Gw2-64.exe+99DFC0`     | "Cadence/Tick" variant handler  |
+| `Gw2-64.exe+99DF50`     | "Seed/Epoch" variant handler    |
 
 ## Payload Variants
 
-### Variant A: Cadence/Tick (Normal Gameplay)
+### Variant A: Cadence/Tick (Handler: `...99DFC0`)
 
-This variant is sent periodically to provide a continuous time-sync signal.
+This variant is sent periodically during normal gameplay to provide a continuous time-sync signal.
 
 **Live Packet Sample:**
 `0F 05 88 B7 7F 09 88 B9 0E 00`
@@ -36,7 +37,7 @@ This variant is sent periodically to provide a continuous time-sync signal.
 | 0x06   | u16    | `time_hi`      | High part of the timestamp. |
 | 0x08   | u16    | `flags_or_id`  | A low-variability field, purpose unknown. |
 
-### Variant B: Seed/Epoch (Map Load/Transition)
+### Variant B: Seed/Epoch (Handler: `...99DF50`)
 
 This variant is sent in a burst to initialize the client's clock to a new "epoch" when joining a new map or instance.
 
@@ -54,10 +55,20 @@ This variant is sent in a burst to initialize the client's clock to a new "epoch
 
 ## Evidence
 
-The Fast Path nature of this packet was definitively confirmed via manual tracing. A hardware breakpoint was placed on a unique data signature of the packet's payload (e.g., `0D 05`) within the network receive buffer. Tracing the code that accessed this data led directly to the hardcoded processing logic inside `Msg::DispatchStream` and proved that the execution path **jumps over the generic `call rax` dispatcher**, confirming it has no external handler.
+The existence and addresses of the multiple dynamic handlers were confirmed using a live C++ message hook (`MessageHandlerHook.cpp`). The hook intercepts calls within the main dispatcher and logs the opcode and the address of the handler function in the `RAX` register.
+
+**Live Log Snippet:**
+```
+[Packet Discovery] Opcode: 0x003F -> Handler: Gw2-64.exe+000000000099DFC0
+[Packet Discovery] Opcode: 0x003F -> Handler: Gw2-64.exe+000000000099DF50
+[Packet Discovery] Opcode: 0x003F -> Handler: Gw2-64.exe+000000000099DF50
+[Packet Discovery] Opcode: 0x003F -> Handler: Gw2-64.exe+000000000099DFC0
+```
+
+This log provides definitive proof of the two distinct handlers being used for this opcode.
 
 ## Confidence
 
 *   **Packet Identity:** High.
-*   **Architectural Flow:** High (Confirmed via manual assembly trace).
-*   **Payload Structures:** High (Inferred from consistent live data and validated by observing the hardcoded parsing logic).
+*   **Architectural Flow:** High (Confirmed via live C++ hook logs).
+*   **Payload Structures:** High (Inferred from consistent live data).
