@@ -1,6 +1,7 @@
 # Packet Parser Discovery Playbook (SMSG Dynamic Analysis Workflow)
 
 **Date:** 2025-08-05
+**Status:** **Revised & Finalized**
 
 ## Objective
 
@@ -82,7 +83,36 @@ Now, switch to your static analysis tool (Ghidra).
 ### Phase 3: Decode the Schema and Understand Handler Logic
 
 1.  **Decode the Schema:** Once you have the schema address (from `RCX` in Phase 2), you can use your `KX_CMSG_Full_Schema_Decoder.lua` script to decode its structure. Paste the schema address into the script's input prompt.
-    *   **Important Note on SMSG Schemas:** The `TYPECODE_MAP` in `KX_CMSG_Full_Schema_Decoder.lua` was primarily derived from CMSG's `Msg::MsgPack` function. It has been observed that `MsgUnpack::ParseWithSchema` (for SMSG) may interpret some typecodes differently (e.g., `0x08` might be an 8-byte `qword` instead of a 12-byte `float[3]`). A full analysis of `MsgUnpack::ParseWithSchema`'s internal `switch` logic is required to build a definitive, SMSG-specific `TYPECODE_MAP` for 100% accurate decoding.
+
+    *   **Solved: The Definitive SMSG Typecode Map:** The investigation into the SMSG typecode discrepancy is complete. Analysis of the `MsgUnpack::ParseWithSchema` function's internal `switch` logic has confirmed that it interprets certain typecodes differently than its CMSG counterpart (`Msg::MsgPack`).
+
+        The most critical divergence is typecode `0x08`, which corresponds to an 8-byte `long long` in SMSG packets, not the 12-byte `float[3]` used in CMSG.
+
+        Use the following definitive `TYPECODE_MAP` for 100% accurate decoding of all SMSG schemas:
+
+| Typecode | Data Type (from `MsgUnpack::ParseWithSchema`) | Size (bytes) | Notes |
+| :--- | :--- | :--- | :--- |
+| `0x01` | `short` | 2 | Consistent with CMSG. |
+| `0x02` | `byte` | 1 | Consistent with CMSG. |
+| `0x03` | `int` | 4 | Consistent with CMSG. |
+| `0x04` | Compressed `int` | 1-5 | Variable-length integer. Consistent with CMSG. |
+| `0x05` | `long long` | 8 | Consistent with CMSG. |
+| `0x06` | `float` or `int` | 4 | Consistent with CMSG. |
+| `0x07` | `float[2]` | 8 | Consistent with CMSG. |
+| **`0x08`** | **`long long` or `qword`** | **8** | **DIVERGENCE:** CMSG uses this for `float[3]` (12 bytes). SMSG uses it for an 8-byte integer or pointer. |
+| `0x09` | `float[4]` | 16 | Consistent with CMSG. |
+| `0x0A` | Special Vector + Compressed Int | 12 + variable | Consistent with CMSG. |
+| `0x0D` | `string` (wchar_t\*) | Variable | Null-terminated wide string. Consistent with CMSG. |
+| `0x0E` | `string_utf8` (char\*) | Variable | Null-terminated UTF-8 string. Consistent with CMSG. |
+| `0x0F` | Optional Block | Variable | Preceded by a flag byte. Consistent with CMSG. |
+| `0x11` | Variable Array (byte count) | Variable | Consistent with CMSG. |
+| `0x12` | Variable Array (short count) | Variable | Consistent with CMSG. |
+| `0x14` | Variable Buffer (byte count) | Variable | Consistent with CMSG. |
+| `0x15` | Variable Buffer (short count) | Variable | Consistent with CMSG. |
+| `0x18` | Terminator | 0 | Marks the end of a schema. Consistent with CMSG. |
+
+With this corrected map, your tooling can now be updated to accurately decode SMSG schemas.
+
 2.  **Analyze Handler Logic:** With the schema structure known, analyze the decompiled code of the handler function you discovered. This will reveal the semantic meaning of the packet's fields by observing how the handler uses the parsed data.
 
     **Note on Fast Path Handlers:** For high-frequency packets that use the "Fast Path" (like `SMSG_AGENT_UPDATE_BATCH`), the dynamically discovered handler (e.g., `Event::PreHandler_Stub_0x88`) is a *notification stub* that is called *after* the packet has already been parsed by hardcoded logic inside `Msg::DispatchStream`. Do not look for parsing logic in these stubs; it resides in the dispatcher itself.
@@ -101,4 +131,4 @@ Now, switch to your static analysis tool (Ghidra).
 
 ## Conclusion
 
-This dynamic-first workflow is the only reliable method for reverse engineering the game's incoming network protocol. Static analysis is a powerful tool, but it must be guided by live, in-game observation to ensure accuracy and account for dynamic dispatch.
+This dynamic-first workflow is the only reliable method for reverse engineering the game's incoming network protocol. Static analysis is a powerful tool, but it must be guided by live, in-game observation and the correct typecode map to ensure accuracy and account for dynamic dispatch.
