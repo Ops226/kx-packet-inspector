@@ -1,87 +1,50 @@
 # SMSG_SERVER_COMMAND (0x0027)
 
 **Direction:** Server -> Client
-**Status:** Confirmed (Dynamic Analysis Backed)
+**Status:** Confirmed (Container Packet with Subtypes)
 
 ## Summary
 
-`SMSG_0x0027` is a multi-purpose command packet sent by the server to trigger specific logic paths on the client. At least two distinct variants have been identified, each with its own unique payload and a dedicated handler function. The packet's behavior is determined by its subtype, which is the first field in the payload.
+`SMSG_SERVER_COMMAND` is a container packet used by the server to trigger specific, discrete actions on the client, such as performance checks or ping responses. It operates using a subtype system, where the first field of the payload is a `ushort` that dictates the message's actual purpose.
 
-## Variants and Handlers
+This packet is handled by a special subtype dispatcher which uses the Subtype ID to look up the correct schema and final handler function from a master dispatch table.
 
-### Subtype 0x0003 (2-byte Payload) - Performance Trigger
+## Dispatch Mechanism
 
-This variant acts as a simple trigger for an internal client-side event related to graphics performance.
+1.  The client receives a packet with opcode `0x0027`.
+2.  The main dispatcher routes it to a preliminary handler.
+3.  This handler reads the first 2 bytes of the payload to get the **Subtype ID**.
+4.  It uses this ID to look up an entry in a master dispatch table (located at `.rdata:018fc8e0` in Ghidra).
+5.  This table provides the specific **Schema Address** and **Final Handler Address** for that subtype.
+6.  The payload is then parsed using the correct schema, and the final handler is called.
 
-*   **Log Entry:** `10:19:28.207 [R] SMSG_UNKNOWN Op:0x0027 | Sz:2 | 03 00`
-*   **Handler:** **`SMSG_Handler_Performance_Trigger`** (`FUN_14023cea0`)
-*   **Purpose:** The handler retrieves a value from the graphics performance system (`GrPerf::GetCounterValue`) and then uses a generic builder function (`CMSG::BuildAndSendPacket`) to send a new CMSG packet, likely reporting this performance metric back to the server.
+## Discovered Subtypes
 
-#### Layout (Subtype 0x0003)
+### Subtype 0x0003: Performance Trigger
 
-| Offset | Type | Name | Notes |
-|---|---|---|---|
-| 0x00 | `uint16` | subtype | Always `0x0003`. |
+This variant commands the client to measure a graphics performance metric and send it back to the server in a `CMSG_0x0002` packet.
+
+*   **Final Handler:** `SMSG_Handler_Performance_Trigger` (`Gw2-64.exe+23CEA0`)
+*   **Schema Address:** `Gw2-64.exe+25700A0`
+*   **On-Wire Payload:** `03 00`
+
+**Schema Structure:**
+| Field # | Typecode | Type Name | Notes |
+| :------ | :------- | :-------- | :---- |
+| 0       | `0x01`   | `short`   | The subtype ID, `0x0003`. |
 
 ---
 
-### Subtype 0x0004 (6-byte Payload) - Ping Response Trigger
+### Subtype 0x0004: Ping Response Trigger
 
-This variant is a server command that instructs the client to immediately send a response packet (`CMSG_0x0006`). This is a classic "ping-pong" or state-check mechanism.
+This variant commands the client to immediately reply with a `CMSG_0x0006_PING_RESPONSE` packet, echoing back a value provided by the server.
 
-*   **Log Entry:** `10:19:28.273 [R] SMSG_UNKNOWN Op:0x0027 | Sz:6 | 04 00 44 00 00 00`
-*   **Handler:** **`SMSG_Handler_PingResponse_Trigger`** (`FUN_14023cf00`)
-*   **Purpose:** The handler reads the `value` field from this packet's payload and immediately calls **`CMSG::BuildPingResponse`** to send a `CMSG_0x0006` packet containing the value back to the server.
+*   **Final Handler:** `SMSG_Handler_PingResponse_Trigger` (`Gw2-64.exe+23CF00`)
+*   **Schema Address:** `Gw2-64.exe+25700F0`
+*   **On-Wire Payload:** `04 00 [variable-length value]`
 
-#### Layout (Subtype 0x0004)
-
-| Offset | Type | Name | Notes |
-|---|---|---|---|
-| 0x00 | `uint16` | subtype | Always `0x0004`. |
-| 0x02 | `uint32` | value | A value to be sent back to the server in a `CMSG_0x0006` packet. |
-
-## Evidence
-
-The distinct handlers for each subtype were discovered via dynamic analysis by hooking the post-parse dispatch call within `Msg::DispatchStream`.
-
-**Handler for Subtype 0x0003:**
-`[Packet Discovery] Opcode: 0x0027 -> Handler: Gw2-64.exe+23CEA0` (`SMSG_Handler_Performance_Trigger`)
-
-**Handler for Subtype 0x0004:**
-`[Packet Discovery] Opcode: 0x0027 -> Handler: Gw2-64.exe+23CF00` (`SMSG_Handler_PingResponse_Trigger`)
-
-Decompiled code for `SMSG_Handler_PingResponse_Trigger`:
-```c
-void SMSG_Handler_PingResponse_Trigger(undefined8 param_1, longlong param_2)
-{
-  // param_2 is a pointer to the parsed payload: { subtype: 0x0004, value: 0x00440000 }
-  
-  // Calls the CMSG builder, passing the value from offset +2 of the payload.
-  CMSG::BuildPingResponse(*(uint *)(param_2 + 2));
-}
-```
-
-## Proposed C-style structs
-
-```cpp
-#pragma pack(push, 1)
-
-// Common header to read the subtype
-struct smsg_0027_header {
-    uint16_t subtype;
-};
-
-// Full struct for the 6-byte ping-response variant
-struct smsg_0027_ping_response {
-    uint16_t subtype;  // == 0x0004
-    uint32_t value;    // The value to be echoed back to the server.
-};
-
-#pragma pack(pop)
-```
-
-## Confidence
-
-*   **Opcodes and Handlers:** High. Confirmed via live dynamic analysis.
-*   **Structures:** High. The layouts are simple and directly supported by the size of the logged packets and the logic of the handlers.
-*   **Function Names:** High. Based on direct evidence from assert strings and functional analysis.
+**Schema Structure:**
+| Field # | Typecode | Type Name        | Notes |
+| :------ | :------- | :--------------- | :---- |
+| 0       | `0x01`   | `short`          | The subtype ID, `0x0004`. |
+| 1       | `0x04`   | `compressed_int` | A value to be echoed back to the server. Parsed as a `uint` by the handler. |
