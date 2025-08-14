@@ -18,6 +18,7 @@ namespace kx {
         MOVEMENT_END = 0x0004,
         PING_RESPONSE = 0x0006,
         JUMP = 0x0009,
+        CLIENT_TELEMETRY_A = 0x000C,
         MOVEMENT_WITH_ROTATION = 0x000B,
         HEARTBEAT = 0x0011,
         MOVEMENT = 0x0012,
@@ -26,13 +27,18 @@ namespace kx {
         MOUNT_MOVEMENT = 0x0018,
         LANDED = 0x001A,
         LOGOUT_TO_CHAR_SELECT = 0x0023,
+        INTERACTION_CLEANUP = 0x0032,
         AGENT_LINK = 0x0036,
+        CLIENT_TELEMETRY_B = 0x00BA,
+        COMBAT_ACTION_BATCH = 0x00DB,
         DESELECT_AGENT = 0x00DD,
         SELECT_AGENT = 0x00E5,
         CHAT_MESSAGE = 0x0100,
+        UI_TICK_OR_UNKNOWN = 0x0108,
         INTERACT_WITH_AGENT = 0x010E,
         INTERACTION_RESPONSE = 0x010F,
         CLIENT_STATE_SYNC = 0x0113,
+        GENERIC_CONTAINER = 0x0164,
     };
 
 

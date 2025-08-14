@@ -113,6 +113,7 @@
     <ClCompile Include="src\PacketHeaders.cpp" />
     <ClCompile Include="src\PacketParser.cpp" />
     <ClCompile Include="src\PacketProcessor.cpp" />
+    <ClCompile Include="src\parsers\ParseCombatBatchPacket.cpp" />
     <ClCompile Include="src\parsers\ParseDeselectAgentPacket.cpp" />
     <ClCompile Include="src\parsers\ParseHeartbeatPacket.cpp" />
     <ClCompile Include="src\parsers\ParseInteractionResponsePacket.cpp" />
@@ -155,6 +156,7 @@
     <ClInclude Include="src\PacketParser.h" />
     <ClInclude Include="src\PacketProcessor.h" />
     <ClInclude Include="src\PacketStructures.h" />
+    <ClInclude Include="src\parsers\ParseCombatBatchPacket.h" />
     <ClInclude Include="src\parsers\ParseDeselectAgentPacket.h" />
     <ClInclude Include="src\parsers\ParseHeartbeatPacket.h" />
     <ClInclude Include="src\parsers\ParseInteractionResponsePacket.h" />

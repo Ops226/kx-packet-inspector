@@ -4,6 +4,7 @@
 #include <utility>
 
 // Include all individual parser headers
+#include "parsers/ParseCombatBatchPacket.h"
 #include "parsers/ParseDeselectAgentPacket.h"
 #include "parsers/ParseHeartbeatPacket.h"
 #include "parsers/ParseInteractWithAgentPacket.h"
@@ -35,6 +36,8 @@ const ParserRegistry& GetParserRegistry() {
         {{kx::PacketDirection::Sent, static_cast<uint16_t>(kx::CMSG_HeaderId::SELECT_AGENT)}, ParseSelectAgentPacket},
         {{kx::PacketDirection::Sent, static_cast<uint16_t>(kx::CMSG_HeaderId::INTERACT_WITH_AGENT)}, ParseInteractWithAgentPacket},
         {{kx::PacketDirection::Sent, static_cast<uint16_t>(kx::CMSG_HeaderId::INTERACTION_RESPONSE)}, ParseInteractionResponsePacket},
+		{{kx::PacketDirection::Sent, static_cast<uint16_t>(kx::CMSG_HeaderId::COMBAT_ACTION_BATCH)}, ParseCombatBatchPacket},
+		{{kx::PacketDirection::Sent, static_cast<uint16_t>(kx::CMSG_HeaderId::INTERACTION_CLEANUP)}, ParseCombatBatchPacket},
 
         // SMSG Parsers
         {{kx::PacketDirection::Received, static_cast<uint16_t>(kx::SMSG_HeaderId::PLAYER_STATE_UPDATE)}, ParsePlayerStateUpdatePacket},
