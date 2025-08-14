@@ -110,6 +110,7 @@
     <ClCompile Include="src\MessageHandlerHook.cpp" />
     <ClCompile Include="src\MsgSendHook.cpp" />
     <ClCompile Include="src\PacketData.cpp" />
+    <ClCompile Include="src\PacketHeaders.cpp" />
     <ClCompile Include="src\PacketParser.cpp" />
     <ClCompile Include="src\PacketProcessor.cpp" />
     <ClCompile Include="src\parsers\ParseDeselectAgentPacket.cpp" />
