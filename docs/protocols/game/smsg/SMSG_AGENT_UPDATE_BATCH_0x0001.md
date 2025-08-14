@@ -31,7 +31,7 @@ The processing of this packet occurs on a "Fast Path" that differs significantly
 
 5.  **Direct State Update:** After parsing the fields, the code within the `switch` case calls the appropriate game logic functions to directly update the agent's state (e.g., position, health, effects).
 
-6.  **Final Notification Call (Previously Misidentified as Handlers):** After all the parsing and processing is complete, the dispatcher calls the function pointer registered for the `0x0001` opcode (e.g., `Event::PreHandler_Stub_0x88`). These functions accept no payload data because the data has already been fully processed. Their role is simply to notify other, more abstract game systems that a specific agent event has occurred.
+6.  **Final Notification Call (Previously Misidentified as Handlers):** After all the parsing and processing is complete, the dispatcher calls the function pointer registered for the `0x0001` opcode (e.g., [`Event::PreHandler_Stub_0x88`](../../../engine_internals/evidence/event_system/Event_PreHandler_Stub_0x88.c)). These functions accept no payload data because the data has already been fully processed. Their role is simply to notify other, more abstract game systems that a specific agent event has occurred.
 
 ## Investigation Note: The Event System Dead End
 

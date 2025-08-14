@@ -9,7 +9,7 @@ This packet is designed to link two agents together (e.g., a pet to a character)
 
 ## Construction
 
-*   **Builder Function:** `CMSG::BuildAgentLink`
+*   **Builder Function:** [`CMSG::BuildAgentLink`](../evidence/CMSG_BuildAgentLink.c)
 *   **Pathway:** Direct Queue (`MsgConn::QueuePacket`)
 *   **Schema Address:** `DAT_142513080`
 

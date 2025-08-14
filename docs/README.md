@@ -20,7 +20,7 @@ For a high-level visual overview of the client's network communication with the 
 
 *   **[Methodologies](./methodologies/README.md):** Guides and playbooks for reverse engineering the game client. These documents provide the step-by-step processes used to discover the information in this repository.
 
-*   **[Raw Decompilations](./raw_decompilations/README.md):** Organized raw decompiled code snippets used as direct evidence for the architectural descriptions and packet analyses.
+*   **[Architectural Evidence](./architectural_evidence/README.md):** Organized raw decompiled code snippets used as direct evidence for the architectural descriptions and packet analyses.
 
 ## Getting Started & Common Workflows
 

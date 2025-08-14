@@ -11,7 +11,7 @@ This packet is sent by the client to send a chat message to the server. It is a 
 
 This packet originates from the UI command pipeline, which is distinct from the player-action (`AgCommand`) pipeline.
 
-1.  **Context Creation (`Gw2::Game::Chat::Cli::CtCliContext`):** The top-level handler, documented in [`CMSG_Chat_Cli_CtCliContext.c`](../../raw_decompilations/cmsg/CMSG_Chat_Cli_CtCliContext.c), is called when the user sends a message. It gathers the message text and channel ID.
+1.  **Context Creation (`Gw2::Game::Chat::Cli::CtCliContext`):** The top-level handler, documented in [`CMSG_Chat_Cli_CtCliContext.c`](./evidence/CMSG_Chat_Cli_CtCliContext.c), is called when the user sends a message. It gathers the message text and channel ID.
 2.  **Serialization (`Gw2::Services::Msg::Msg`):** The context function then calls a helper function that passes the data down to the generic serialization engine to be built using the schema for opcode `0x0100`.
 3.  **Sending Mechanism (Buffered Stream):** The packet is written to the main `MsgSendContext` buffer and sent in a batch when `MsgConn::FlushPacketBuffer` is called.
 

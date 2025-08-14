@@ -24,12 +24,12 @@ The Login Protocol is the first of the three major network systems the client in
 
 ### 1. `GcApi` (The State Machine)
 
-*   **Evidence:** `docs/raw_decompilations/cmsg/login/GcApi_StateMachine.c`
+*   **Evidence:** `../../protocols/login/evidence/GcApi_StateMachine.c`
 *   **Role:** This is the master controller for the login connection's lifecycle. It operates as a state machine, checking the current connection status and calling the appropriate `GcAuthCmd` functions to send the next packet in the sequence. It is responsible for orchestrating the entire authentication process from start to finish.
 
 ### 2. `GcAuthCmd` (The Packet Builders)
 
-*   **Evidence:** `../../raw_decompilations/cmsg/login/GcAuthCmd_PacketBuilders.c`
+*   **Evidence:** `../../protocols/login/evidence/GcAuthCmd_PacketBuilders.c`
 *   **Role:** This is a collection of dozens of small, single-purpose functions. Each function is responsible for building and sending one specific Client-to-Login-Server (`c2ls`) packet. By analyzing these functions, the opcodes and payloads for the entire authentication sequence can be reverse-engineered.
 
 ## Discovered `c2ls` Packets

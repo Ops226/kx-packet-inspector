@@ -13,10 +13,10 @@ The packet is schema-driven, and its variable size is a direct result of a large
 
 The packet is created via a deep and complex call chain, confirming it as a core gameplay action:
 
-1.  **Skill Command Handler (`FUN_1410168c0`):** The top-level function that receives the command to use a skill.
-2.  **Pre-Aggregator/Gate (`FUN_1410225a0`):** Validates the skill use and identifies the generic builder function that needs to be called.
+1.  **Skill Command Handler (`CMSG_Skill_CommandHandler`):** The top-level function that receives the command to use a skill.
+2.  **Pre-Aggregator/Gate (`CMSG_Skill_PreAggregator`):** Validates the skill use and identifies the generic builder function that needs to be called.
 3.  **Data Aggregator (at `*param_1 + 0x30`):** A virtual function that gathers all the detailed skill data (target, position, etc.) into a temporary structure.
-4.  **Generic Builder (`FUN_141018E00`):** The aggregator makes a virtual call to this function, passing it the temporary data structure.
+4.  **Generic Builder (`CMSG_Builder_FromAggregatedData`):** The aggregator makes a virtual call to this function, passing it the temporary data structure.
 5.  **Serialization (`CMSG::BuildAndSendPacket`):** The generic builder calls the main serialization engine, which uses the schema for opcode `0x0017` to build the packet.
 6.  **Sending Mechanism (Buffered Stream):** The packet is written to the main `MsgSendContext` buffer and sent in a batch when `MsgConn::FlushPacketBuffer` is called.
 

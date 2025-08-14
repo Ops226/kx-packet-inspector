@@ -101,6 +101,6 @@ The investigation has concluded successfully. The "Reader" code—a small virtua
 
 The key functions, `Reflect_TypeDecoder` and `Reflect_FieldInitDispatcher`, revealed the exact logic for interpreting the `MemberInitializer` structure. This analysis confirmed that the `typeDataOrOffset` field is a bitfield containing the member's memory offset and various type-specific flags.
 
-With this knowledge, the [Dynamic Scan Dumper](../../tools/ghidra/KX_ReflectionDumper_DynamicScan.py) script has been finalized. It now accurately dumps the engine's class layouts into a clean, human-readable C++ header file, fulfilling the project's primary goal. The most critical decompiled code snippets that serve as evidence of this system's functionality have been preserved in the `raw_decompilations` directory.
+With this knowledge, the [Dynamic Scan Dumper](../../tools/ghidra/KX_ReflectionDumper_DynamicScan.py) script has been finalized. It now accurately dumps the engine's class layouts into a clean, human-readable C++ header file, fulfilling the project's primary goal. The most critical decompiled code snippets that serve as evidence of this system's functionality have been preserved in the [`evidence/reflection_system`](./evidence/reflection_system) directory.
 
 This document represents the complete, evidence-based foundation of the engine's core reflection system.

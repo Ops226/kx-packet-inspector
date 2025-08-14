@@ -24,7 +24,7 @@ These addresses can change with game updates. The first step is always to find t
 
 ### Step 1.1: Find the Schema Table Address (Dynamic Analysis)
 
-1.  **Find `MsgConn` Pointer:** The global pointer to the game connection object is at the static address `DAT_142628290`. In a memory debugger (like Cheat Engine), find the 8-byte pointer value stored at `"Gw2-64.exe"+2628290`. This is the live address of the `MsgConn` object.
+1.  **Find `MsgConn` Pointer:** The global pointer to the game connection object is at the static address `DAT_142628290`. In a memory debugger (like Cheat Engine), find the 8-byte pointer value stored at "Gw2-64.exe"+2628290. This is the live address of the `MsgConn` object.
 2.  **Find `SchemaTableInfo` Pointer:** The pointer to the structure containing table information is at offset `+0x18` from the `MsgConn` object. Read the 8-byte pointer at `[MsgConn Address + 0x18]`.
 3.  **Find Table Base and Size:** From the `SchemaTableInfo` address, read the following:
     *   **Table Base:** The 8-byte pointer at offset `+0x50`.
@@ -125,3 +125,4 @@ void Detour_CMSG_BuildAndSendPacket(byte* pMsgConnContext, uint size, ushort* pP
 **Benefit:**
 
 By implementing this, the discovery process would change from a manual, one-by-one hunt into a bulk data collection task. A user could simply play the game for a few minutes, performing various actions, and the tool would automatically generate a near-complete map of which high-level functions are responsible for building which CMSG packets. This would accelerate the documentation of the remaining CMSG protocol exponentially.
+

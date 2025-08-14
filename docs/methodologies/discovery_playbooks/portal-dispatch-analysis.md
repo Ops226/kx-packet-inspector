@@ -45,7 +45,7 @@ The body of `Portal::DispatchMessage` contains a `switch` statement with **over 
 
 Analyzing this single function is the key to unlocking the entire Platform/Portal protocol. The workflow is simple and repeatable:
 
-1.  Open `../../raw_decompilations/smsg/Portal_DispatchMessage.c`.
+1.  Open [`../../protocols/portal/evidence/Portal_DispatchMessage.c`](../../protocols/portal/evidence/Portal_DispatchMessage.c).
 2.  Examine the `switch(*param_3)` statement.
 3.  For each `case [OPCODE]:`, identify the primary function being called.
 4.  This gives you a definitive mapping: **`OPCODE -> Final Handler Function`**.
@@ -56,10 +56,10 @@ Analyzing this single function is the key to unlocking the entire Platform/Porta
 This architectural understanding is supported by the following decompiled functions:
 
 *   **The Dispatch Chain:**
-    *   `docs/raw_decompilations/smsg/Msg_DispatchStream.c`
-    *   `docs/raw_decompilations/smsg/Portal_DynamicHandler_Entry.c`
-    *   `../../raw_decompilations/smsg/Portal_DispatchMessage.c`
+    *   [`../../architectural_evidence/incoming_smsg/Msg_DispatchStream.c`](../../architectural_evidence/incoming_smsg/Msg_DispatchStream.c)
+    *   [`../../protocols/portal/evidence/Portal_DynamicHandler_Entry.c`](../../protocols/portal/evidence/Portal_DynamicHandler_Entry.c)
+    *   [`../../protocols/portal/evidence/Portal_DispatchMessage.c`](../../protocols/portal/evidence/Portal_DispatchMessage.c)
 *   **The Portal Connection System:**
-    *   `docs/raw_decompilations/cmsg/portal/PortalCli_Constructor.c`
-    *   `docs/raw_decompilations/cmsg/portal/PortalCli_Auth.c`
-    *   `../../raw_decompilations/cmsg/portal/GcPortal_Router.c`
+    *   [`../../protocols/portal/evidence/PortalCli_Constructor.c`](../../protocols/portal/evidence/PortalCli_Constructor.c)
+    *   [`../../protocols/portal/evidence/PortalCli_Auth.c`](../../protocols/portal/evidence/PortalCli_Auth.c)
+    *   [`../../protocols/portal/evidence/GcPortal_Router.c`](../../protocols/portal/evidence/GcPortal_Router.c)
