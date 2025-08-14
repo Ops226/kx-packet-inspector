@@ -29,6 +29,14 @@ The pipeline for handling messages from the server is a multi-stage, dynamic pro
     *   **Generic Handler Dispatch:** `Msg::DispatchStream` calls the handler function pointer (from `HandlerInfo+0x18`), passing it the parsed data tuple. (e.g., [`Marker::Cli::ProcessAgentMarkerUpdate`](../../raw_decompilations/smsg/Marker_Cli_ProcessAgentMarkerUpdate.c)).
     *   **Fast Path Notification (Decoupled Event):** After the hardcoded parsing and state updates are completed *inside* `Msg::DispatchStream`, a notification stub (e.g., [`Event::PreHandler_Stub_0x88`](../../raw_decompilations/common/event_system/Event_PreHandler_Stub_0x88.c)) is called. This stub does not process packet data itself; its role is to queue a generic, post-facto event using the [`Event::Factory_QueueEvent`](../../raw_decompilations/common/event_system/Event_Factory_QueueEvent.c) system.
 
+### Master Dispatch Table Registration
+
+Static analysis has revealed the existence of a master dispatch table in the `.rdata` section of the executable. This table contains pairs of `[Schema Pointer, Handler Pointer]` that serve as the default dispatch information for most generic SMSG opcodes.
+
+This table is not used directly by its address. Instead, it is registered with the `MsgChannel` system during client initialization by a dedicated function, `FUN_001de000`. This function passes blocks of this table to a registration routine (`FUN_00fd5eb0`), which builds the final, ready-to-use dispatch map in memory. This confirms that the table in the executable is a static "staging area" for the live dispatch system.
+
+While analyzing this registration function is not necessary for the day-to-day discovery of individual packets (for which using the C++ logger and finding XREFs is faster), it provides the definitive architectural proof of how the generic SMSG dispatch system is constructed.
+
 ### Outgoing (CMSG) Packet Processing
 
 The pipeline for sending messages to the server is based on a hybrid model that combines high-level data aggregation with a generic, schema-driven serialization engine.
