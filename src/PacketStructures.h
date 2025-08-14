@@ -48,6 +48,14 @@ namespace kx::Packets {
         uint16_t flags;
     };
 
+    // CMSG_SELECT_AGENT (0x00E5) - 8 bytes
+    struct CMSG_SelectAgentPayload {
+        uint16_t opcode;
+        uint16_t agentId;
+        uint16_t unknown;
+        uint16_t agentId_repeat;
+    };
+
     #pragma pack(pop)
 
     // Add definitions for other packet payloads here as they are identified.
