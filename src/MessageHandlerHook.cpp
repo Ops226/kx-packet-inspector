@@ -34,7 +34,7 @@ constexpr ptrdiff_t DISPATCHER_HOOK_OFFSET_SITE_4 = 0x3E3; // Before CALL at 141
  * @brief Detour executed before a game message handler is called by the dispatcher.
  * @details Extracts message details using register context and known struct offsets,
  *          then delegates processing. Designed to work with MidHooks placed before
- *          handler call preparations in FUN_1412e9390.
+ *          handler call preparations in Msg::DispatchStream.
  * @param ctx SafetyHook context providing access to register state (RBX, RBP).
 */
 void hookHandlerCallSite(SafetyHookContext& ctx)
@@ -48,18 +48,17 @@ void hookHandlerCallSite(SafetyHookContext& ctx)
         // pMsgConn is expected in RBX based on dispatcher function analysis.
         void* pMsgConn = reinterpret_cast<void*>(ctx.rbx);
         if (!pMsgConn) {
-            OutputDebugStringA("[hookHandlerCallSite] Error: pMsgConn (RBX) is NULL.\n");
+            // This is a critical failure, as all other pointers are derived from this.
             return;
         }
 
         // messageDataPtr is derived from a stack local relative to RBP.
-        // NOTE: Relies on stack offset [RBP-0x18], potentially less stable than struct offsets across game updates.
         void* messageDataPtr = nullptr;
         if (ctx.rbp != 0) {
             messageDataPtr = *reinterpret_cast<void**>(ctx.rbp + STACK_OFFSET_MESSAGE_DATA_PTR);
         }
         else {
-            OutputDebugStringA("[hookHandlerCallSite] Error: RBP register is NULL. Cannot get message data ptr.\n");
+            // Also a critical failure.
             return;
         }
 
@@ -68,53 +67,60 @@ void hookHandlerCallSite(SafetyHookContext& ctx)
             static_cast<char*>(pMsgConn) + kx::GameStructs::MSGCONN_HANDLER_INFO_PTR_OFFSET // Offset 0x48
             );
         if (!handlerInfoPtr) {
-            OutputDebugStringA("[hookHandlerCallSite] Warning: handlerInfoPtr (at MsgConn+0x48) is NULL.\n");
+            // Can happen, but we can't proceed without it.
             return;
         }
 
-        // Get the handler function pointer from the HandlerInfo structure.
-        void* handlerFuncPtr = *reinterpret_cast<void**>(
-            static_cast<char*>(handlerInfoPtr) + kx::GameStructs::HANDLER_INFO_HANDLER_FUNC_PTR_OFFSET // Offset 0x18
-        );
+        // --- Read all key pieces of information from the Handler Info struct ---
 
-        // Read the message identifier (Opcode) from the handler info structure.
+        // 1. Read the message identifier (Opcode).
         uint16_t messageId = *reinterpret_cast<uint16_t*>(
             static_cast<char*>(handlerInfoPtr) + kx::GameStructs::HANDLER_INFO_MSG_ID_OFFSET // Offset 0x00
             );
 
-        // Get pointer to the message definition structure to retrieve the message size.
+        // 2. Get the handler function pointer.
+        void* handlerFuncPtr = *reinterpret_cast<void**>(
+            static_cast<char*>(handlerInfoPtr) + kx::GameStructs::HANDLER_INFO_HANDLER_FUNC_PTR_OFFSET // Offset 0x18
+            );
+
+        // 3. Get pointer to the message definition structure (this is the Schema).
         void* msgDefPtr = *reinterpret_cast<void**>(
             static_cast<char*>(handlerInfoPtr) + kx::GameStructs::HANDLER_INFO_MSG_DEF_PTR_OFFSET // Offset 0x08
             );
 
+        // 4. Get the message size from the message definition structure.
         uint32_t messageSize = 0;
         if (msgDefPtr) {
             messageSize = *reinterpret_cast<uint32_t*>(
                 static_cast<char*>(msgDefPtr) + kx::GameStructs::MSG_DEF_SIZE_OFFSET // Offset 0x20
                 );
         }
-        else {
-            OutputDebugStringA("[hookHandlerCallSite] Warning: msgDefPtr is NULL. Assuming messageSize 0.\n");
-        }
 
+        // Sanity check: if the game says the packet has a size but our pointer is null, something is wrong.
         if (messageDataPtr == nullptr && messageSize > 0) {
-            char buffer[128];
-            sprintf_s(buffer, sizeof(buffer), "[hookHandlerCallSite] Error: messageDataPtr is NULL but messageSize is %u. Skipping.\n", messageSize);
-            OutputDebugStringA(buffer);
             return;
         }
 
-        // Log the handler address along with the other packet info.
-        // We can pass this new pointer to our PacketProcessor.
-        // For now, let's just log it to the debug output to prove it works.
-        if (handlerFuncPtr) {
+        // --- NEW: Automated Discovery Logging ---
+        // Log all three key pieces of information: Opcode, Handler, and Schema.
+        if (handlerFuncPtr && msgDefPtr) {
             char buffer[256];
             uintptr_t gameBase = (uintptr_t)GetModuleHandle(L"Gw2-64.exe");
             uintptr_t handlerOffset = (uintptr_t)handlerFuncPtr - gameBase;
-            sprintf_s(buffer, sizeof(buffer), "[Packet Discovery] Opcode: 0x%04X -> Handler: Gw2-64.exe+%p\n", messageId, (void*)handlerOffset);
+            uintptr_t schemaOffset = (uintptr_t)msgDefPtr - gameBase; // Calculate schema RVA
+
+            // This new log format provides a complete mapping for static analysis.
+            sprintf_s(buffer, sizeof(buffer),
+                "[Packet Discovery] Opcode: 0x%04X -> Handler: +%p -> Schema: +%p\n",
+                messageId,
+                (void*)handlerOffset,
+                (void*)schemaOffset
+            );
             OutputDebugStringA(buffer);
         }
 
+        // --- Original Packet Processing Call ---
+        // Pass the captured data to your existing processing function.
         kx::PacketProcessing::ProcessDispatchedMessage(
             kx::PacketDirection::Received,
             messageId,
@@ -123,13 +129,9 @@ void hookHandlerCallSite(SafetyHookContext& ctx)
             pMsgConn
         );
     }
-    catch (const std::exception& e) {
-        char buffer[256];
-        sprintf_s(buffer, sizeof(buffer), "[hookHandlerCallSite] Exception: %s\n", e.what());
-        OutputDebugStringA(buffer);
-    }
     catch (...) {
-        OutputDebugStringA("[hookHandlerCallSite] Unknown exception occurred (Potential Access Violation).\n");
+        // Catch potential access violations if the game state is unexpected.
+        OutputDebugStringA("[hookHandlerCallSite] CRITICAL: Unknown exception occurred (Potential Access Violation).\n");
     }
 }
 
