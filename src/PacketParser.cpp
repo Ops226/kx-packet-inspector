@@ -4,6 +4,7 @@
 #include <utility>
 
 // Include all individual parser headers
+#include "parsers/ParseAgentMovementStatePacket.h"
 #include "parsers/ParseCombatBatchPacket.h"
 #include "parsers/ParseDeselectAgentPacket.h"
 #include "parsers/ParseHeartbeatPacket.h"
@@ -43,6 +44,7 @@ const ParserRegistry& GetParserRegistry() {
         {{kx::PacketDirection::Received, static_cast<uint16_t>(kx::SMSG_HeaderId::PLAYER_STATE_UPDATE)}, ParsePlayerStateUpdatePacket},
         {{kx::PacketDirection::Received, static_cast<uint16_t>(kx::SMSG_HeaderId::TIME_SYNC)}, ParseTimeSyncPacket},
         {{kx::PacketDirection::Received, static_cast<uint16_t>(kx::SMSG_HeaderId::SERVER_COMMAND)}, ParseServerCommandPacket},
+        {{kx::PacketDirection::Received, static_cast<uint16_t>(kx::SMSG_HeaderId::AGENT_MOVEMENT_STATE_CHANGE)}, ParseAgentMovementStatePacket},
     };
     return registry;
 }

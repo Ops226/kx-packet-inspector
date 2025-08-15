@@ -53,7 +53,7 @@ namespace kx {
         AGENT_STATE_BULK = 0x0016,      // Unconfirmed: Bulk agent states/effects
         SKILL_UPDATE = 0x0017,          // Unconfirmed: Skill bar, cooldowns, action results
         CONFIG_UPDATE = 0x001A,         // Unconfirmed: Settings/configuration sync
-        AGENT_EFFECT_UPDATE = 0x001C,   // Unconfirmed: Agent effects, status, or interactions
+        AGENT_MOVEMENT_STATE_CHANGE = 0x001C, // CONFIRMED: Animation/movement state sync (Apply/Remove)
         MAP_DATA_BLOCK = 0x0020,        // Unconfirmed: Map geometry, entities, terrain data
         PET_INFO = 0x0021,              // Unconfirmed: Pet/minion state
         MAP_DETAIL_INFO = 0x0023,       // Unconfirmed: Detailed info for specific map elements

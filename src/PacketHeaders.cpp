@@ -48,7 +48,7 @@ const std::map<SMSG_HeaderId, std::string_view> g_smsgNames = {
     { SMSG_HeaderId::AGENT_STATE_BULK, "AGENT_STATE_BULK" },
     { SMSG_HeaderId::SKILL_UPDATE, "SKILL_UPDATE" },
     { SMSG_HeaderId::CONFIG_UPDATE, "CONFIG_UPDATE" },
-    { SMSG_HeaderId::AGENT_EFFECT_UPDATE, "AGENT_EFFECT_UPDATE" },
+    { SMSG_HeaderId::AGENT_MOVEMENT_STATE_CHANGE, "AGENT_MOVEMENT_STATE_CHANGE" },
     { SMSG_HeaderId::MAP_DATA_BLOCK, "MAP_DATA_BLOCK" },
     { SMSG_HeaderId::PET_INFO, "PET_INFO" },
     { SMSG_HeaderId::MAP_DETAIL_INFO, "MAP_DETAIL_INFO" },
