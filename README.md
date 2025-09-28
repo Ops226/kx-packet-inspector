@@ -1,6 +1,6 @@
 # KX Packet Inspector (Guild Wars 2)
 
-**Disclaimer:** This tool is intended for educational purposes only, allowing users to explore and understand network communication in Guild Wars 2. Using this tool may violate the game's Terms of Service. Use it responsibly and at your own risk.
+**Disclaimer:** This is a developer tool intended for educational and research purposes only. It is a powerful utility and should be used responsibly. As with all our tools, its use is governed by our Terms of Service and Acceptable Use Policy. Users are responsible for using this tool in compliance with all applicable terms of service.
 
 ## Overview
 
