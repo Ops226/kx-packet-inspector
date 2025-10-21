@@ -2,6 +2,8 @@
 
 Guild Wars 2 utilizes multiple coordinate systems and a specific unit scale, which are critical to understand when working with positional data from network packets.
 
+> **For detailed information on all GW2 unit systems, conversions, and evidence-based analysis, see: [GW2 Unit Systems - Evidence-Based Reference](https://github.com/kxtools/kx-vision/blob/main/docs/engine_internals/unit-systems.md)**
+
 ## Dual Coordinate Systems
 
 The game employs two primary coordinate systems:
